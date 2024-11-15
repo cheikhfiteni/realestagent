@@ -2,6 +2,8 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 
+from config import DB_PATH
+
 Base = declarative_base()
 class Listing(Base):
     __tablename__ = 'listings'
@@ -28,5 +30,5 @@ class Listing(Base):
         return f"<Listing(title='{self.title}', price=${self.price}, {self.bedrooms}BR/{self.bathrooms}BA, score={self.score}, location='{self.location}', neighborhood='{self.neighborhood}')>"
 
 # Create database engine and tables
-engine = create_engine(f'sqlite:///listings.db')
+engine = create_engine(f'sqlite:///{DB_PATH}')
 Base.metadata.create_all(engine)

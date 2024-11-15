@@ -1,9 +1,22 @@
+from pydantic import BaseModel
+
 CRAIGSLIST_URLS = [
     "https://sfbay.craigslist.org/search/apa?min_bathrooms=2&min_bedrooms=4&postal=94142&search_distance=1#search=1~gallery~0~0",
 ]
 
 # Database settings
 DB_PATH = "listings.db"
+
+class QueryConfig(BaseModel):
+    """Configuration for housing search query parameters. All fields are optional."""
+    min_bedrooms: int | None = 4
+    min_square_feet: int | None = 1000  
+    min_bathrooms: float | None = 2.0
+    target_price_bedroom: int | None = 2000
+
+QUERY_CONFIG = QueryConfig(min_bedrooms=4, min_square_feet=1000, min_bathrooms=2.0, target_price_bedroom=2000)
+
+USE_CLAUDE = False
 
 # GPT-4V settings
 GPT_MODEL = "gpt-4o-mini"

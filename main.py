@@ -6,9 +6,10 @@ from selenium.common.exceptions import TimeoutException
 
 import time
 import re
+from evaluator import evaluate_unevaluated_listings
 from models import Listing
 from config import CRAIGSLIST_URLS
-from database import get_stored_listing_hashes, save_listing_to_db, _listing_hash, save_new_listings_to_db
+from database import get_stored_listing_hashes, save_new_listings_to_db, _listing_hash
 from scraper import _get_information_from_listing
 
 BATCH_SIZE = 5
@@ -75,7 +76,7 @@ def scrape_listings(base_url: str):
 
     if upsert_listings:
         print(f"Saving remaining {len(upsert_listings)} listings to database")
-        save_listing_to_db(upsert_listings)
+        save_new_listings_to_db(upsert_listings)
         stored_hashes.update([listing.hash for listing in upsert_listings])
                 
     driver.quit()
@@ -83,3 +84,4 @@ def scrape_listings(base_url: str):
 if __name__ == "__main__":
     for base_url in CRAIGSLIST_URLS:
         scrape_listings(base_url)
+    evaluate_unevaluated_listings()

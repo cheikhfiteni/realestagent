@@ -1,10 +1,9 @@
 import base64
 
 import httpx
-from config import GPT_MODEL, CLAUDE_MODEL, CRITERIA
-from sqlalchemy.orm import sessionmaker
+from config import GPT_MODEL, CLAUDE_MODEL, CRITERIA, USE_CLAUDE, QUERY_CONFIG
 from database import get_unevaluated_listings
-from models import engine, Listing
+from models import Listing
 import json
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -16,6 +15,9 @@ load_dotenv(override=True)
 
 BATCH_SIZE = 5
 
+PRICE_COST_BOUND = 1.25
+BEDROOM_PREFERENCE_MULTIPLIER = 1.5
+BATHROOM_PREFERENCE_MULTIPLIER = 1.5
 class ResponseSchema(BaseModel):
     score: int
     reasoning_trace: str
@@ -155,10 +157,10 @@ def _evaluate_with_claude(listing: Listing, criteria: str) -> tuple[int, str]:
 def evaluate_listing_aesthetics(listing: Listing) -> tuple[int, str]:
     """Evaluate listing aesthetics using configured model."""
 
-    if GPT_MODEL and False:
-        return _evaluate_with_gpt4v(listing, CRITERIA)
-    elif CLAUDE_MODEL:
+    if CLAUDE_MODEL and USE_CLAUDE:
         return _evaluate_with_claude(listing, CRITERIA)
+    elif GPT_MODEL:
+        return _evaluate_with_gpt4v(listing, CRITERIA)
     else:
         return 0, "No evaluation model configured"
 
@@ -170,42 +172,40 @@ def evaluate_listing_hueristics(listing: Listing) -> tuple[int, str]:
     trace = []
     
     # Price evaluation
-    if listing.price < 2000:
-        score += 10
-        trace.append("Good price under $2000")
-    elif listing.price < 3000:
-        score += 5
-        trace.append("Moderate price under $3000")
+    if QUERY_CONFIG.target_price_bedroom:
+        if listing.price < QUERY_CONFIG.target_price_bedroom:
+            score += 10
+            trace.append(f"Good price under ${QUERY_CONFIG.target_price_bedroom}")
+        elif listing.price < QUERY_CONFIG.target_price_bedroom * PRICE_COST_BOUND:
+            score += 5
+            trace.append(f"Moderate price under ${QUERY_CONFIG.target_price_bedroom * PRICE_COST_BOUND}")
         
     # Square footage evaluation
-    if listing.square_footage > 1000:
-        score += 10
-        trace.append(f"Good size at {listing.square_footage}sqft")
-    elif listing.square_footage > 700:
-        score += 5
-        trace.append(f"Moderate size at {listing.square_footage}sqft")
+    if QUERY_CONFIG.min_square_feet:
+        if listing.square_footage > QUERY_CONFIG.min_square_feet * PRICE_COST_BOUND:
+            score += 10
+            trace.append(f"Good size at {listing.square_footage}sqft")
+        elif listing.square_footage > QUERY_CONFIG.min_square_feet:
+            score += 5
+            trace.append(f"Moderate size at {listing.square_footage}sqft")
         
     # Bedrooms evaluation
-    if listing.bedrooms >= 2:
-        score += 10
-        trace.append(f"Good number of bedrooms: {listing.bedrooms}")
-    elif listing.bedrooms == 1:
-        score += 5
-        trace.append("Single bedroom")
+    if QUERY_CONFIG.min_bedrooms:
+        if listing.bedrooms >= QUERY_CONFIG.min_bedrooms:
+            score += 5 + (listing.bedrooms - QUERY_CONFIG.min_bedrooms) * BEDROOM_PREFERENCE_MULTIPLIER
+            trace.append(f"Good number of bedrooms: {listing.bedrooms}")
+        elif listing.bedrooms == QUERY_CONFIG.min_bedrooms:
+            score += 5
+            trace.append(f"Moderate number of bedrooms: {listing.bedrooms}")
         
     # Bathrooms evaluation
-    if listing.bathrooms >= 1.5:
-        score += 10
-        trace.append(f"Good number of bathrooms: {listing.bathrooms}")
-    elif listing.bathrooms == 1:
-        score += 5
-        trace.append("Single bathroom")
-
-    # Add aesthetic evaluation
-    aesthetic_score, aesthetic_trace = evaluate_listing_aesthetics(listing)
-    score += aesthetic_score
-    if aesthetic_trace:
-        trace.append(aesthetic_trace)
+    if QUERY_CONFIG.min_bathrooms:
+        if listing.bathrooms >= QUERY_CONFIG.min_bathrooms:
+            score += 5 + (listing.bathrooms - QUERY_CONFIG.min_bathrooms) * BATHROOM_PREFERENCE_MULTIPLIER
+            trace.append(f"Good number of bathrooms: {listing.bathrooms}")
+        elif listing.bathrooms == QUERY_CONFIG.min_bathrooms:
+            score += 5
+            trace.append(f"Moderate number of bathrooms: {listing.bathrooms}")
 
     return score, " | ".join(trace)
 
@@ -216,7 +216,7 @@ def evaluate_unevaluated_listings():
         session, unevaluated_listings = get_unevaluated_listings()
         
         current_batch = []
-        for listing in unevaluated_listings[:1]:
+        for listing in unevaluated_listings:
             hueristic_score, hueristic_trace = evaluate_listing_hueristics(listing)
             aesthetic_score, aesthetic_trace = evaluate_listing_aesthetics(listing)
             listing.score = hueristic_score + aesthetic_score
@@ -230,11 +230,11 @@ def evaluate_unevaluated_listings():
             if len(current_batch) >= BATCH_SIZE:
                 print(f"Committed batch of {len(current_batch)} evaluations")
                 current_batch = []
-                # session.commit()
+                session.commit()
 
         # Commit any remaining
         if current_batch:
-            # session.commit()
+            session.commit()
             print(f"Committed final batch of {len(current_batch)} evaluations")
             
     finally:
