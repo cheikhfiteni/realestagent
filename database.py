@@ -1,6 +1,6 @@
 import hashlib
 from models import engine, Listing
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 
 def _listing_hash(text):
     return hashlib.md5(text.encode()).hexdigest()
@@ -14,7 +14,7 @@ def get_stored_listing_hashes():
         session.close()
     
 
-def save_listing_to_db(listings: list[Listing]):
+def save_new_listings_to_db(listings: list[Listing]):
     Session = sessionmaker(bind=engine)
     session = Session()
 
@@ -43,3 +43,31 @@ def save_listing_to_db(listings: list[Listing]):
             session.commit()
     
     session.close()
+
+def get_unevaluated_listings() -> tuple[Session, list[Listing]]:
+    """Get listings that haven't been evaluated yet."""
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    try:
+        return session, session.query(Listing).filter(
+            ((Listing.score == 0) & (Listing.trace == "")) |
+            (Listing.score.is_(None)) |
+            (Listing.trace.is_(None))
+        ).all()
+    except Exception as e:
+        session.close()
+        raise e
+
+def get_top_listings(limit: int = 10) -> list[Listing]:
+    """Get the top scored listings from the database."""
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    
+    try:
+        return session.query(Listing)\
+            .filter(Listing.score.isnot(None))\
+            .order_by(Listing.score.desc())\
+            .limit(limit)\
+            .all()
+    finally:
+        session.close()
