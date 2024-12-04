@@ -6,11 +6,11 @@ from selenium.common.exceptions import TimeoutException
 
 import time
 import re
-from evaluator import evaluate_unevaluated_listings
-from models import Listing
-from config import CRAIGSLIST_URLS
-from database import get_stored_listing_hashes, save_new_listings_to_db, _listing_hash
-from scraper import _get_information_from_listing
+from app.core.evaluator import evaluate_unevaluated_listings
+from app.models.models import Listing
+from app.config import CRAIGSLIST_URLS
+from app.db.database import get_stored_listing_hashes, save_new_listings_to_db, _listing_hash
+from app.core.scraper import _get_information_from_listing
 
 BATCH_SIZE = 5
 SLEEP_TIME = 0.2
@@ -28,7 +28,7 @@ def scrape_listings(base_url: str):
         # uses craiglist redirect to check if end of gallery
         current_url = re.sub(r'gallery~\d+~0', f'gallery~{page}~0', base_url)
         driver.get(current_url)
-        time.sleep(SLEEP_TIME*10)
+        time.sleep(SLEEP_TIME*25)
         final_url = driver.current_url
         
         if final_url in visited_urls:

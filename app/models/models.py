@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 
-from config import DB_PATH
+from app.config import DB_PATH
 
 Base = declarative_base()
 class Listing(Base):

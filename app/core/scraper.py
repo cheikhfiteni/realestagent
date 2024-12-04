@@ -5,8 +5,8 @@ from selenium.webdriver.support import expected_conditions as EC
 
 import re
 import json
-from models import Listing
-from database import _listing_hash
+from app.models.models import Listing
+from app.db.database import _listing_hash
 
 def _extract_housing_details(driver):
     try:

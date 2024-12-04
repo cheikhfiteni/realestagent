@@ -1,9 +1,9 @@
 import base64
 
 import httpx
-from config import GPT_MODEL, CLAUDE_MODEL, CRITERIA, USE_CLAUDE, QUERY_CONFIG
-from database import get_unevaluated_listings
-from models import Listing
+from app.config import GPT_MODEL, CLAUDE_MODEL, CRITERIA, USE_CLAUDE, QUERY_CONFIG
+from app.db.database import get_unevaluated_listings
+from app.models.models import Listing
 import json
 from dotenv import load_dotenv
 from pydantic import BaseModel
