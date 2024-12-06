@@ -13,6 +13,8 @@ from app.config import CRAIGSLIST_URLS
 from app.db.database import get_stored_listing_hashes, save_new_listings_to_db, _listing_hash
 from app.core.scraper import _get_information_from_listing
 
+import os
+
 BATCH_SIZE = 5
 SLEEP_TIME = 0.2
 
@@ -21,15 +23,18 @@ def scrape_listings(base_url: str):
     chrome_options.add_argument('--headless=new')
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--disable-gpu')
-    chrome_options.add_argument('--disable-setuid-sandbox')
-    chrome_options.add_argument('--disable-extensions')
-    chrome_options.add_argument('--disable-software-rasterizer')
-    chrome_options.add_argument('--no-first-run')
-    chrome_options.add_argument('--no-default-browser-check')
-    chrome_options.add_argument('--host-resolver-rules=MAP * 127.0.0.1')
-
-    # Connect to Selenium standalone server
+    
+    # Add these Chromium-specific options
+    chrome_options.binary_location = "/usr/bin/chromium"  # Path to Chromium binary
+    chrome_options.add_argument('--disable-gpu')  # Required for headless mode on some systems
+    
+    # Remove or comment out these as they might not be needed/supported
+    chrome_options.add_argument('--enable-logging')
+    chrome_options.add_argument('--v=1')
+    chrome_options.add_argument('--remote-debugging-port=9222')
+    chrome_options.add_argument('--remote-debugging-address=0.0.0.0')
+    chrome_options.add_argument('--enable-crash-reporter')
+    
     driver = webdriver.Remote(
         command_executor='http://selenium:4444/wd/hub',
         options=chrome_options
