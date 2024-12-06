@@ -1,0 +1,49 @@
+# docker-compose.yml
+version: '3.8'
+services:
+  selenium:
+    image: selenium/standalone-chrome:4.8.3
+    platform: linux/amd64
+    ports:
+      - "4444:4444"
+      - "7900:7900"  # VNC port
+    shm_size: "6g"
+    environment:
+      - SE_NODE_MAX_SESSIONS=1
+      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_START_XVFB=false
+      - SE_SCREEN_WIDTH=1920
+      - SE_SCREEN_HEIGHT=1080
+      # Completely disable OpenTelemetry
+      - OTEL_SDK_DISABLED=true
+      - OTEL_EXPORTER_OTLP_ENDPOINT=""
+      - OTEL_TRACES_EXPORTER=none
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=none
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql://user:pass@db:5432/dbname
+    depends_on:
+      selenium:
+        condition: service_healthy
+      db:
+        condition: service_started
+    
+  db:
+    image: postgres:14
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=dbname
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

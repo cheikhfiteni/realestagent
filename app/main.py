@@ -3,6 +3,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.chrome.options import Options
 
 import time
 import re
@@ -16,7 +17,25 @@ BATCH_SIZE = 5
 SLEEP_TIME = 0.2
 
 def scrape_listings(base_url: str):
-    driver = webdriver.Chrome()
+    chrome_options = Options()
+    chrome_options.add_argument('--headless=new')
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--disable-setuid-sandbox')
+    chrome_options.add_argument('--disable-extensions')
+    chrome_options.add_argument('--disable-software-rasterizer')
+    chrome_options.add_argument('--no-first-run')
+    chrome_options.add_argument('--no-default-browser-check')
+    chrome_options.add_argument('--host-resolver-rules=MAP * 127.0.0.1')
+
+    # Connect to Selenium standalone server
+    driver = webdriver.Remote(
+        command_executor='http://selenium:4444/wd/hub',
+        options=chrome_options
+    )
+    
+    print("Chrome started successfully!")  # If you see this, Chrome started OK
     stored_hashes = get_stored_listing_hashes()
 
     visited_urls = set()
@@ -42,7 +61,16 @@ def scrape_listings(base_url: str):
             WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, ".gallery-card"))
             )
-            
+
+
+            # Method 2: Get specific element and its children
+            results_container = driver.find_element(By.CSS_SELECTOR, ".results.cl-results-page")
+            print(results_container.get_attribute('outerHTML'))
+
+            # For debugging, you might want to write to a file instead:
+            with open('page_structure.html', 'w', encoding='utf-8') as f:
+                f.write(driver.page_source)
+                        
             links = [element.find_element(By.CSS_SELECTOR, "a").get_attribute("href") 
                      for element in driver.find_elements(By.CSS_SELECTOR, ".gallery-card")]
             

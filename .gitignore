@@ -6,3 +6,5 @@
 *.db-journal
 .env
 
+# temporarily check out the debugging page
+page_structure.html
