@@ -5,7 +5,7 @@ CRAIGSLIST_URLS = [
 ]
 
 # Database settings
-DB_PATH = "listings.db"
+DB_PATH = "app/db/listings.db"
 
 class QueryConfig(BaseModel):
     """Configuration for housing search query parameters. All fields are optional."""

@@ -3,20 +3,44 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.chrome.options import Options
 
 import time
 import re
-from evaluator import evaluate_unevaluated_listings
-from models import Listing
-from config import CRAIGSLIST_URLS
-from database import get_stored_listing_hashes, save_new_listings_to_db, _listing_hash
-from scraper import _get_information_from_listing
+from app.core.evaluator import evaluate_unevaluated_listings
+from app.models.models import Listing
+from app.config import CRAIGSLIST_URLS
+from app.db.database import get_stored_listing_hashes, save_new_listings_to_db, _listing_hash
+from app.core.scraper import _get_information_from_listing
+
+## TODO: REFACTOR ALL OF THIS AWAY. 
 
 BATCH_SIZE = 5
 SLEEP_TIME = 0.2
 
 def scrape_listings(base_url: str):
-    driver = webdriver.Chrome()
+    chrome_options = Options()
+    chrome_options.add_argument('--headless=new')
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    
+    # Add these Chromium-specific options
+    chrome_options.binary_location = "/usr/bin/chromium"  # Path to Chromium binary
+    chrome_options.add_argument('--disable-gpu')  # Required for headless mode on some systems
+    
+    # Remove or comment out these as they might not be needed/supported
+    chrome_options.add_argument('--enable-logging')
+    chrome_options.add_argument('--v=1')
+    chrome_options.add_argument('--remote-debugging-port=9222')
+    chrome_options.add_argument('--remote-debugging-address=0.0.0.0')
+    chrome_options.add_argument('--enable-crash-reporter')
+    
+    driver = webdriver.Remote(
+        command_executor='http://selenium:4444/wd/hub',
+        options=chrome_options
+    )
+    
+    print("Chrome started successfully!")  # If you see this, Chrome started OK
     stored_hashes = get_stored_listing_hashes()
 
     visited_urls = set()
@@ -28,7 +52,7 @@ def scrape_listings(base_url: str):
         # uses craiglist redirect to check if end of gallery
         current_url = re.sub(r'gallery~\d+~0', f'gallery~{page}~0', base_url)
         driver.get(current_url)
-        time.sleep(SLEEP_TIME*10)
+        time.sleep(SLEEP_TIME*25)
         final_url = driver.current_url
         
         if final_url in visited_urls:
@@ -42,7 +66,16 @@ def scrape_listings(base_url: str):
             WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, ".gallery-card"))
             )
-            
+
+
+            # Method 2: Get specific element and its children
+            results_container = driver.find_element(By.CSS_SELECTOR, ".results.cl-results-page")
+            print(results_container.get_attribute('outerHTML'))
+
+            # For debugging, you might want to write to a file instead:
+            with open('page_structure.html', 'w', encoding='utf-8') as f:
+                f.write(driver.page_source)
+                        
             links = [element.find_element(By.CSS_SELECTOR, "a").get_attribute("href") 
                      for element in driver.find_elements(By.CSS_SELECTOR, ".gallery-card")]
             
@@ -81,7 +114,10 @@ def scrape_listings(base_url: str):
                 
     driver.quit()
 
-if __name__ == "__main__":
+def run_job():
     for base_url in CRAIGSLIST_URLS:
         scrape_listings(base_url)
     evaluate_unevaluated_listings()
+
+if __name__ == "__main__":
+    run_job()

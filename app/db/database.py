@@ -1,5 +1,5 @@
 import hashlib
-from models import engine, Listing
+from app.models.models import engine, Listing
 from sqlalchemy.orm import sessionmaker, Session
 
 def _listing_hash(text):
