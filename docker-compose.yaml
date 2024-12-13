@@ -12,9 +12,9 @@ services:
       - SE_NODE_MAX_SESSIONS=1
       - SE_NODE_SESSION_TIMEOUT=300
       - SE_START_XVFB=true
-      - GRID_DEBUG=true
-      - JAVA_OPTS=-Dwebdriver.chrome.verboseLogging=true
-      - CHROME_DRIVER_VERSION=111.0.5563.146  # Force exact version match
+      - GRID_DEBUG=false
+      - SE_LOG_LEVEL=WARN
+      - CHROME_DRIVER_VERSION=111.0.5563.146 
     volumes:
       - /dev/shm:/dev/shm
     healthcheck:
@@ -31,15 +31,47 @@ services:
       chromedriver --version && 
       /opt/bin/entry_point.sh"
 
+  db:
+    image: postgres:14
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    networks:
+      - app_network
+
   web:
     build: .
     networks:
       - app_network
+    ports:
+      - "8000:8000"
     environment:
       - SELENIUM_HOST=selenium-grid
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+      - LOG_LEVEL=INFO
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
     depends_on:
       selenium:
         condition: service_healthy
+      db:
+        condition: service_started
+    volumes:
+      - .:/app
+      - /app/venv
+      - /app/__pycache__
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
 
 networks:
   app_network:
