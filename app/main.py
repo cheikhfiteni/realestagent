@@ -1,15 +1,34 @@
 # Basic structure for app/main.py
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi_sqlalchemy import DBSessionMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.logic import run_job as run_job_logic
+from app.config import QueryConfig
 from pydantic import BaseModel
+from typing import Dict, Optional
+from datetime import datetime
+import uuid
 
 class JobInput(BaseModel):
-    message: str
+    min_bedrooms: int | None = 4
+    min_square_feet: int | None = 1000  
+    min_bathrooms: float | None = 2.0
+    target_price_bedroom: int | None = 2000
+    criteria: str | None = None
+
+class JobResult(BaseModel):
+    job_id: str
+    status: str
+    started_at: Optional[datetime]
+    completed_at: Optional[datetime]
+    error: Optional[str]
 
 app = FastAPI()
 scheduler = BackgroundScheduler()
+
+# In-memory job queue and results store
+job_queue: Dict[str, JobInput] = {}
+job_results: Dict[str, JobResult] = {}
 
 @app.on_event("startup")
 async def startup_event():
@@ -22,8 +41,26 @@ async def shutdown_event():
 # Schedule jobs
 @scheduler.scheduled_job('interval', hours=24)
 def run_scheduled_jobs():
-    # Run jobs for all active users
-    pass
+    for job_id, job_input in job_queue.items():
+        try:
+            # Update job status
+            job_results[job_id].status = "running"
+            job_results[job_id].started_at = datetime.now()
+            
+            # Run the job
+            run_job_logic()
+            
+            # Update completion status
+            job_results[job_id].status = "completed"
+            job_results[job_id].completed_at = datetime.now()
+            
+            # Remove from queue after successful completion
+            del job_queue[job_id]
+            
+        except Exception as e:
+            job_results[job_id].status = "failed"
+            job_results[job_id].error = str(e)
+            job_results[job_id].completed_at = datetime.now()
 
 # API Endpoints
 
@@ -36,13 +73,25 @@ async def health_check():
     return {"status": "healthy"}
 
 @app.get("/jobs/{job_id}")
-async def get_job(job_id: int):
-    # Get job status/results
-    pass
+async def get_job(job_id: str):
+    if job_id not in job_results:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job_results[job_id]
 
-@app.post("/jobs/run")
-async def run_job(job_input: JobInput):
-    print(f"Received message: {job_input.message}")
-    run_job_logic()
-    return {"status": "success", "message": job_input.message}
-
+@app.post("/jobs/add")
+async def add_job(job_input: JobInput):
+    job_id = str(uuid.uuid4())
+    
+    # Add to queue
+    job_queue[job_id] = job_input
+    
+    # Initialize result object
+    job_results[job_id] = JobResult(
+        job_id=job_id,
+        status="queued",
+        started_at=None,
+        completed_at=None,
+        error=None
+    )
+    
+    return {"status": "queued", "job_id": job_id}
