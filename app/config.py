@@ -1,11 +1,12 @@
 from pydantic import BaseModel
+import os
 
 CRAIGSLIST_URLS = [
     "https://sfbay.craigslist.org/search/apa?min_bathrooms=2&min_bedrooms=4&postal=94142&search_distance=1#search=1~gallery~0~0",
 ]
 
 # Database settings
-DB_PATH = "app/db/listings.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///app/db/listings.db")
 
 class QueryConfig(BaseModel):
     """Configuration for housing search query parameters. All fields are optional."""
