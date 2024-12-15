@@ -40,7 +40,7 @@ importers:
         specifier: ^15.12.0
         version: 15.13.0
       typescript:
-        specifier: ^5.7.2
+        specifier: ~5.7.2
         version: 5.7.2
       typescript-eslint:
         specifier: ^8.15.0
