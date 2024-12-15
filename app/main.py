@@ -8,6 +8,8 @@ from pydantic import BaseModel
 from typing import Dict, Optional
 from datetime import datetime
 import uuid
+from sqlalchemy import text
+from app.models.models import engine
 
 class JobInput(BaseModel):
     min_bedrooms: int | None = 4
@@ -95,3 +97,12 @@ async def add_job(job_input: JobInput):
     )
     
     return {"status": "queued", "job_id": job_id}
+
+@app.get("/db-health")
+async def database_health_check():
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
