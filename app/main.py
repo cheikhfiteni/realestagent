@@ -1,15 +1,15 @@
 # Basic structure for app/main.py
 from fastapi import FastAPI, HTTPException
-from fastapi_sqlalchemy import DBSessionMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.logic import run_job as run_job_logic
-from app.config import QueryConfig
+from app.services.authentication import router as auth_router
 from pydantic import BaseModel
 from typing import Dict, Optional
 from datetime import datetime
 import uuid
 from sqlalchemy import text
-from app.models.models import engine
+from app.db.database import engine
 
 class JobInput(BaseModel):
     min_bedrooms: int | None = 4
@@ -26,7 +26,16 @@ class JobResult(BaseModel):
     error: Optional[str]
 
 app = FastAPI()
+app.include_router(auth_router, prefix="/auth", tags=["authentication"])
 scheduler = BackgroundScheduler()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Your frontend URL
+    allow_credentials=True,                    # Important for cookies
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # In-memory job queue and results store
 job_queue: Dict[str, JobInput] = {}

@@ -19,6 +19,8 @@ An automated apartment finder that scrapes listings and uses a vLLM to evaluate 
 Install the requirements
 ```
 uv pip install -r requirements.txt
+cd frontend
+pnpm install
 ```
 Change the `config.py` file to desired craiglist query url, and specify model settings. For those who wish to manage API keys in `.env`, write in following format:
 
@@ -31,6 +33,7 @@ Note that DB secrets point differently in dev and prod. (This is also probably g
 scraper as an independent service). 
 
 Run the scraper through `main.py`, and run evaluations through `evaluator.py`
+Run the frontend from the sub-repository using `pnpm dev`
 
 ## Roadmap
 
