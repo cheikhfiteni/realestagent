@@ -9,7 +9,7 @@ from contextlib import contextmanager, asynccontextmanager
 
 
 # Sync SQLAlchemy engine for migrations and model creation
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(bind=engine)
 
 # Async engine

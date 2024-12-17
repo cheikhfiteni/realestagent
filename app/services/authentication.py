@@ -4,15 +4,14 @@ from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta
 from typing import Optional
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import select
+from sqlalchemy import select, update
 from app.models.models import User, VerificationCode
 import jwt
 import secrets
 from email.message import EmailMessage
 import aiosmtplib
-from app.db.database import get_async_db, sessionmaker
+from app.db.database import get_async_db
 from fastapi.responses import JSONResponse
-from starlette.middleware.sessions import SessionMiddleware
 
 from dotenv import load_dotenv
 import os
@@ -29,6 +28,7 @@ SMTP_HOST = os.getenv("SMTP_HOST")
 SMTP_PORT = os.getenv("SMTP_PORT")
 SMTP_USER = os.getenv("SMTP_USER")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+SMTP_FROM = os.getenv("SMTP_FROM")
 
 # Database setup
 database = get_async_db()
@@ -51,19 +51,27 @@ router = APIRouter()
 # Email sending utility
 async def send_verification_email(email: str, code: str):
     message = EmailMessage()
-    message["From"] = SMTP_USER
+    message["From"] = SMTP_FROM
     message["To"] = email
     message["Subject"] = "Your verification code"
     message.set_content(f"Your verification code is: {code}\nValid for {EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES} minutes.")
 
+    smtp = aiosmtplib.SMTP(
+        hostname=os.getenv("SMTP_HOST"),
+        port=os.getenv("SMTP_PORT"),
+        use_tls=False,
+        timeout=10
+    )
+
     try:
-        async with aiosmtplib.SMTP(hostname=SMTP_HOST, port=SMTP_PORT) as smtp:
-            await smtp.starttls()
-            await smtp.login(SMTP_USER, SMTP_PASSWORD)
-            await smtp.send_message(message)
+        await smtp.connect()
+        await smtp.login(SMTP_USER, SMTP_PASSWORD)
+        await smtp.send_message(message)
     except Exception as e:
         print(f"Failed to send email: {e}")
         raise HTTPException(status_code=500, detail="Failed to send verification email")
+    finally:
+        await smtp.quit()
 
 # Generate verification code
 def generate_verification_code():
@@ -82,31 +90,22 @@ async def request_verification_code(email_data: EmailVerification, background_ta
     code = generate_verification_code()
     expires_at = datetime.utcnow() + timedelta(minutes=EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES)
     
-    # Store verification code in database
-    query = VerificationCode.__table__.insert().values(
-        email=email_data.email,
-        code=code,
-        expires_at=expires_at
-    )
-    await database.execute(query)
-    
-    # Send email in background
-    background_tasks.add_task(send_verification_email, email_data.email, code)
-    
-    return {"message": "Verification code sent"}
+    async with get_async_db() as db:
+        query = VerificationCode.__table__.insert().values(
+            email=email_data.email,
+            code=code,
+            expires_at=expires_at
+        )
+        await db.execute(query)
+        await db.commit()
 
-
-@router.add_middleware(
-        SessionMiddleware,
-        secret_key=SECRET_KEY,
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
-)
+        # Send email in background
+        background_tasks.add_task(send_verification_email, email_data.email, code)
+        
+        return {"message": "Verification code sent"}
 
 @router.post("/verify-code", response_model=Token)
-async def verify_code(
-    verify_data: VerifyCode,
-    db: sessionmaker = Depends(get_async_db)
-):
+async def verify_code(verify_data: VerifyCode):
     query = select(VerificationCode).where(
         VerificationCode.email == verify_data.email,
         VerificationCode.code == verify_data.code,
@@ -114,31 +113,34 @@ async def verify_code(
         VerificationCode.expires_at > datetime.utcnow()
     ).order_by(VerificationCode.created_at.desc()).limit(1)
     
-    result = await db.execute(query)
-    row = result.scalar_one_or_none()
+    async with get_async_db() as db:
+        result = await db.execute(query)
+        row = result.scalar_one_or_none()
     
-    if not row:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid or expired verification code"
+        if not row:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid or expired verification code"
+            )
+        
+        # Mark code as used
+        await db.execute(
+            update(VerificationCode)
+            .where(VerificationCode.id == row.id)
+            .values(used=True)
         )
-    
-    # Mark code as used
-    await database.execute(
-        "UPDATE verification_codes SET used = TRUE WHERE id = :id",
-        values={"id": row.id}
-    )
-    
-    # Create or get user
-    user_query = "SELECT * FROM users WHERE email = :email"
-    user = await database.fetch_one(user_query, values={"email": verify_data.email})
-    
-    if not user:
-        await database.execute(
-            "INSERT INTO users (email, is_active) VALUES (:email, TRUE)",
-            values={"email": verify_data.email}
-        )
-    
+        await db.commit()
+        
+        # Create or get user
+        user_query = select(User).where(User.email == verify_data.email)
+        result = await db.execute(user_query)
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            new_user = User(email=verify_data.email, is_active=True)
+            db.add(new_user)
+            await db.commit()
+        
     # Create access token
     access_token = create_access_token(
         data={"sub": verify_data.email},

@@ -35,12 +35,19 @@ services:
     image: postgres:14
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     networks:
       - app_network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   web:
     build: .
@@ -65,7 +72,7 @@ services:
       selenium:
         condition: service_healthy
       db:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - .:/app
       - /app/venv

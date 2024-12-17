@@ -7,6 +7,7 @@ CRAIGSLIST_URLS = [
 
 # Database settings
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///app/db/listings.db")
+print(f"\033[35mThe database_url is at {DATABASE_URL}\033[0m")
 
 class QueryConfig(BaseModel):
     """Configuration for housing search query parameters. All fields are optional."""

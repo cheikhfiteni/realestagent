@@ -3,14 +3,14 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.logic import run_job as run_job_logic
-from app.services.authentication import router as auth_router
+from app.services.authentication import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, router as auth_router
 from pydantic import BaseModel
 from typing import Dict, Optional
 from datetime import datetime
 import uuid
 from sqlalchemy import text
 from app.db.database import engine
-
+from starlette.middleware.sessions import SessionMiddleware
 class JobInput(BaseModel):
     min_bedrooms: int | None = 4
     min_square_feet: int | None = 1000  
@@ -31,10 +31,16 @@ scheduler = BackgroundScheduler()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Your frontend URL
+    allow_origins=["http://localhost:5173"],  # Your frontend URL
     allow_credentials=True,                    # Important for cookies
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+app.add_middleware(
+        SessionMiddleware,
+        secret_key=SECRET_KEY,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
 )
 
 # In-memory job queue and results store

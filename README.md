@@ -28,11 +28,21 @@ Change the `config.py` file to desired craiglist query url, and specify model se
 ANTHROPIC_API_KEY=<anthropic-key>
 OPENAI_API_KEY=<openai-key>
 DATABASE_URL=<database-url>
+SECRET_KEY=<secret-key>
 ```
+And specifically for (optional) email server functionality:
+
+```
+SMTP_HOST=
+SMTP_USER=
+SMTP_PORT=
+SMTP_PASSWORD=
+```
+
 Note that DB secrets point differently in dev and prod. (This is also probably going to happen with running the
 scraper as an independent service). 
 
-Run the scraper through `main.py`, and run evaluations through `evaluator.py`
+Run backend through `docker compose up --build`
 Run the frontend from the sub-repository using `pnpm dev`
 
 ## Roadmap
