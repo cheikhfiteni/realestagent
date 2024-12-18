@@ -1,10 +1,14 @@
 // frontend/src/components/Auth.tsx
 import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export function Auth() {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [showCodeInput, setShowCodeInput] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const requestCode = async () => {
     try {
@@ -38,12 +42,16 @@ export function Auth() {
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Important for cookies
+        credentials: 'include',
         body: JSON.stringify({ email, code }),
       });
+      
       if (response.ok) {
-        alert('Successfully logged in!');
-        // Redirect or update UI
+        login(email);
+        navigate('/feed');
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.detail || 'Verification failed'}`);
       }
     } catch (error) {
       console.error('Error:', error);
