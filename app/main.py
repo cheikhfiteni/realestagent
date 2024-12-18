@@ -55,6 +55,27 @@ async def startup_event():
 async def shutdown_event():
     scheduler.shutdown()
 
+async def run_single_job(job_id: str, job_input: JobInput):
+    try:
+        # Update job status
+        job_results[job_id].status = "running"
+        job_results[job_id].started_at = datetime.now()
+        
+        # Run the job
+        run_job_logic()
+        
+        # Update completion status
+        job_results[job_id].status = "completed"
+        job_results[job_id].completed_at = datetime.now()
+        
+        # Remove from queue after successful completion
+        del job_queue[job_id]
+        
+    except Exception as e:
+        job_results[job_id].status = "failed"
+        job_results[job_id].error = str(e)
+        job_results[job_id].completed_at = datetime.now()
+
 # Schedule jobs
 @scheduler.scheduled_job('interval', hours=24)
 async def run_scheduled_jobs():
@@ -76,27 +97,6 @@ async def get_job(job_id: str):
     if job_id not in job_results:
         raise HTTPException(status_code=404, detail="Job not found")
     return job_results[job_id]
-
-async def run_single_job(job_id: str, job_input: JobInput):
-    try:
-        # Update job status
-        job_results[job_id].status = "running"
-        job_results[job_id].started_at = datetime.now()
-        
-        # Run the job
-        run_job_logic()
-        
-        # Update completion status
-        job_results[job_id].status = "completed"
-        job_results[job_id].completed_at = datetime.now()
-        
-        # Remove from queue after successful completion
-        del job_queue[job_id]
-        
-    except Exception as e:
-        job_results[job_id].status = "failed"
-        job_results[job_id].error = str(e)
-        job_results[job_id].completed_at = datetime.now()
 
 @app.post("/jobs/add")
 async def add_job(job_input: JobInput):
@@ -124,3 +124,26 @@ async def database_health_check():
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
+
+@app.get("/changelog")
+async def get_changelog():
+    return [
+        {
+            "id": 1,
+            "date": "2024-01-15",
+            "title": "Initial Release",
+            "description": "Launched the first version of ApartmentFinder with basic search functionality."
+        },
+        {
+            "id": 2, 
+            "date": "2024-01-20",
+            "title": "Search Improvements",
+            "description": "Added filters for bedrooms, bathrooms and square footage. Improved search accuracy."
+        },
+        {
+            "id": 3,
+            "date": "2024-01-25", 
+            "title": "UI Updates",
+            "description": "Refreshed the user interface with a modern design. Added dark mode support."
+        }
+    ]

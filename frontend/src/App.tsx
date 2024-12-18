@@ -29,9 +29,10 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Navigation />
+        {/* <Navigation /> */}
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/welcome" element={<Home />} />
+          <Route path="/" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
           <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
           <Route path="/overview" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
           <Route path="/changelog" element={<Changelog />} />
