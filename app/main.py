@@ -57,27 +57,9 @@ async def shutdown_event():
 
 # Schedule jobs
 @scheduler.scheduled_job('interval', hours=24)
-def run_scheduled_jobs():
+async def run_scheduled_jobs():
     for job_id, job_input in job_queue.items():
-        try:
-            # Update job status
-            job_results[job_id].status = "running"
-            job_results[job_id].started_at = datetime.now()
-            
-            # Run the job
-            run_job_logic()
-            
-            # Update completion status
-            job_results[job_id].status = "completed"
-            job_results[job_id].completed_at = datetime.now()
-            
-            # Remove from queue after successful completion
-            del job_queue[job_id]
-            
-        except Exception as e:
-            job_results[job_id].status = "failed"
-            job_results[job_id].error = str(e)
-            job_results[job_id].completed_at = datetime.now()
+        await run_single_job(job_id, job_input)
 
 # API Endpoints
 
@@ -95,6 +77,27 @@ async def get_job(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found")
     return job_results[job_id]
 
+async def run_single_job(job_id: str, job_input: JobInput):
+    try:
+        # Update job status
+        job_results[job_id].status = "running"
+        job_results[job_id].started_at = datetime.now()
+        
+        # Run the job
+        run_job_logic()
+        
+        # Update completion status
+        job_results[job_id].status = "completed"
+        job_results[job_id].completed_at = datetime.now()
+        
+        # Remove from queue after successful completion
+        del job_queue[job_id]
+        
+    except Exception as e:
+        job_results[job_id].status = "failed"
+        job_results[job_id].error = str(e)
+        job_results[job_id].completed_at = datetime.now()
+
 @app.post("/jobs/add")
 async def add_job(job_input: JobInput):
     job_id = str(uuid.uuid4())
@@ -110,7 +113,7 @@ async def add_job(job_input: JobInput):
         completed_at=None,
         error=None
     )
-    
+    await run_single_job(job_id, job_input)
     return {"status": "queued", "job_id": job_id}
 
 @app.get("/db-health")
