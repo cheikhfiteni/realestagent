@@ -10,27 +10,64 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Initialize state from localStorage if available
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const stored = localStorage.getItem('authState');
+    if (stored) {
+      const { isAuth, timestamp } = JSON.parse(stored);
+      // Check if stored auth is less than 24 hours old
+      if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
+        return isAuth;
+      }
+      // Clear expired auth
+      localStorage.removeItem('authState');
+    }
+    return false;
+  });
   const [email, setEmail] = useState<string | null>(null);
 
+  // Update localStorage whenever auth state changes
   useEffect(() => {
-    // Check authentication status on mount
+    if (isAuthenticated) {
+      const stored = localStorage.getItem('authState');
+      if (!stored) {
+        localStorage.setItem('authState', JSON.stringify({
+          isAuth: true,
+          timestamp: Date.now()
+        }));
+      }
+    } else {
+      localStorage.removeItem('authState');
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    // Still check auth on mount to ensure token is valid
     checkAuth();
   }, []);
 
+  // True source of auth state, checks backend to see if user is authenticated
   const checkAuth = async () => {
     try {
       const response = await fetch('http://localhost:8000/auth/users/me', {
-        credentials: 'include', // Important for sending cookies
+        credentials: 'include',
       });
       
       if (response.ok) {
         const user = await response.json();
         setIsAuthenticated(true);
         setEmail(user.email);
+      } else {
+        // Clear auth state if backend check fails
+        setIsAuthenticated(false);
+        setEmail(null);
+        localStorage.removeItem('authState');
       }
     } catch (error) {
       console.error('Auth check failed:', error);
+      setIsAuthenticated(false);
+      setEmail(null);
+      localStorage.removeItem('authState');
     }
   };
 
@@ -41,10 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      // Send logout request to backend
       const response = await fetch('http://localhost:8000/auth/logout', {
         method: 'POST',
-        credentials: 'include', // Required to send/receive cookies
+        credentials: 'include',
       });
 
       // Verify the Set-Cookie header was received
@@ -64,8 +100,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // For extra security, we can manually expire the session cookie
       // Note: This only works for non-HttpOnly cookies
       document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;';
+      localStorage.removeItem('authState');
       
-      // Force reload to ensure clean slate
       window.location.reload();
     } catch (error) {
       console.error('Logout failed:', error);

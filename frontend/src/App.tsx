@@ -29,7 +29,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        {/* <Navigation /> */}
+        <Navigation />
         <Routes>
           <Route path="/welcome" element={<Home />} />
           <Route path="/" element={<ProtectedRoute><Overview /></ProtectedRoute>} />

@@ -1,9 +1,11 @@
 import '../App.css'
 import { Auth } from '../components/Auth'
 import { useAuth } from '../contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 function Home() {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   console.log(isAuthenticated)
   return (
     <>
