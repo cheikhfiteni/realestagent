@@ -1,8 +1,10 @@
 import '../App.css'
 import { Auth } from '../components/Auth'
+import { useAuth } from '../contexts/AuthContext'
 
 function Home() {
-
+  const { isAuthenticated } = useAuth();
+  console.log(isAuthenticated)
   return (
     <>
       <div style={{ margin: '0 8rem' }}>
@@ -39,8 +41,33 @@ function Home() {
           </a>
         </div>
       </div>
-
-        <Auth />
+        {isAuthenticated ? (
+          <button
+            onClick={() => navigate('/overview')}
+            style={{
+              fontSize: '1.5rem',
+              padding: '1rem 2rem',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: '#4CAF50',
+              color: 'white',
+              cursor: 'pointer',
+              animation: 'bounce 1s infinite',
+              '@keyframes bounce': {
+                '0%, 100%': {
+                  transform: 'translateY(0)'
+                },
+                '50%': {
+                  transform: 'translateY(-10px)'
+                }
+              }
+            }}
+          >
+            Find Your Next Home
+          </button>
+        ) : (
+          <Auth />
+        )}
     </>
   )
 }

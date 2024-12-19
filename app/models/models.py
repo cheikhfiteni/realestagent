@@ -1,11 +1,38 @@
 from datetime import datetime
-from sqlalchemy import Boolean, create_engine, Column, Integer, String, Float, DateTime
+from sqlalchemy import Boolean, create_engine, Column, Integer, String, Float, DateTime, ForeignKey, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 
 from app.config import DATABASE_URL
 
 Base = declarative_base()
+
+class JobTemplate(Base):
+    __tablename__ = 'job_templates'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    min_bedrooms = Column(Integer, nullable=True)
+    min_square_feet = Column(Integer, nullable=True)
+    min_bathrooms = Column(Float, nullable=True)
+    target_price_bedroom = Column(Integer, nullable=True)
+    criteria = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class Job(Base):
+    __tablename__ = 'jobs'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    template_id = Column(Integer, ForeignKey('job_templates.id'))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    listing_scores = Column(JSON, default=dict)  # Store as {listing_id: {"score": float, "trace": str}}
+    
+    template = relationship("JobTemplate")
+    user = relationship("User")
+
 class Listing(Base):
     __tablename__ = 'listings'
 

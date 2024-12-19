@@ -60,15 +60,17 @@ export function Auth() {
 
   return (
     <div>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Enter your email"
-      />
-      <button onClick={requestCode}>Request Code</button>
-
-      {showCodeInput && (
+      {!showCodeInput ? (
+        <>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
+          />
+          <button onClick={requestCode}>Request Code</button>
+        </>
+      ) : (
         <>
           <input
             type="text"
