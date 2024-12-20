@@ -1,4 +1,4 @@
-# Craiglist Apartment Finder
+# RealEstAgent | Apartment-Finder & Rent-Seeker
 
 An automated apartment finder that scrapes listings and uses a vLLM to evaluate them based on customizable criteria.
 
