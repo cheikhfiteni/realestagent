@@ -1,12 +1,14 @@
 import hashlib
-from app.models.models import engine, Listing
+from app.models.models import engine, Listing, Job, JobTemplate, User
 from sqlalchemy.orm import sessionmaker, Session
 from app.config import DATABASE_URL
-
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select, func
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from contextlib import contextmanager, asynccontextmanager
-
+from typing import List, Dict, Optional
+from datetime import datetime, timedelta
+import json
+from uuid import UUID
 
 # Sync SQLAlchemy engine for migrations and model creation
 engine = create_engine(DATABASE_URL, echo=True)
@@ -39,7 +41,6 @@ async def get_async_db() -> AsyncSession:
             yield session
         finally:
             await session.close()
-
 
 def _listing_hash(text):
     return hashlib.md5(text.encode()).hexdigest()
@@ -107,3 +108,101 @@ def get_top_listings(limit: int = 10) -> list[Listing]:
             .all()
     finally:
         session.close()
+
+async def create_job_template(user_id: UUID, job_input: dict) -> JobTemplate:
+    async with get_async_db() as session:
+        template_data = {
+            k: v for k, v in job_input.items() 
+            if k in ['min_bedrooms', 'min_square_feet', 'min_bathrooms', 'target_price_bedroom', 'criteria']
+        }
+        template = JobTemplate(
+            user_id=user_id,
+            **template_data
+        )
+        session.add(template)
+        await session.commit()
+        await session.refresh(template)
+        return template
+
+async def create_job(user_id: UUID, template_id: UUID, name: str) -> Job:
+    async with get_async_db() as session:
+        now = datetime.now()
+        job = Job(
+            user_id=user_id,
+            template_id=template_id,
+            name=name,
+            listing_scores={},
+            created_at=now, 
+            updated_at=now
+        )
+        session.add(job)
+        await session.commit()
+        await session.refresh(job)
+        return job
+
+async def get_user_jobs(user_id: UUID) -> List[Job]:
+    async with get_async_db() as session:
+        result = await session.execute(
+            select(Job).where(Job.user_id == user_id)
+        )
+        return result.scalars().all()
+
+async def get_job_with_listings(job_id: UUID, user_id: UUID) -> Optional[Dict]:
+    async with get_async_db() as session:
+        # Get job and verify user
+        job = await session.get(Job, job_id)
+        if not job or job.user_id != user_id:
+            return None
+            
+        # Get all listings referenced in job
+        listing_ids = list(job.listing_scores.keys())
+        if not listing_ids:
+            return []
+            
+        result = await session.execute(
+            select(Listing).where(Listing.id.in_(listing_ids))
+        )
+        listings = result.scalars().all()
+        
+        # Format response
+        formatted_listings = []
+        for listing in listings:
+            score_data = job.listing_scores.get(str(listing.id), {})
+            image_urls = json.loads(listing.image_urls) if listing.image_urls else []
+            formatted_listings.append({
+                "id": listing.id,
+                "title": listing.title,
+                "cover_image_url": image_urls[0] if image_urls else None,
+                "location": listing.location,
+                "cost": listing.price,
+                "bedrooms": listing.bedrooms,
+                "bathrooms": listing.bathrooms,
+                "square_footage": listing.square_footage,
+                "score": score_data.get("score", 0),
+                "trace": score_data.get("trace", "")
+            })
+        
+        return formatted_listings
+
+async def update_job_listing_score(job_id: UUID, listing_id: UUID, score: float, trace: str):
+    async with get_async_db() as session:
+        job = await session.get(Job, job_id)
+        if not job:
+            return None
+            
+        scores = job.listing_scores or {}
+        scores[str(listing_id)] = {"score": score, "trace": trace}
+        job.listing_scores = scores
+        job.updated_at = datetime.now()
+        
+        await session.commit()
+        return job
+
+async def get_pending_jobs() -> List[Job]:
+    """Get jobs that haven't been updated in 24 hours"""
+    async with get_async_db() as session:
+        one_day_ago = datetime.now() - timedelta(days=1)
+        result = await session.execute(
+            select(Job).where(Job.updated_at <= one_day_ago)
+        )
+        return result.scalars().all()

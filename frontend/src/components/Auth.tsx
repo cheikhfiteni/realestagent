@@ -1,14 +1,12 @@
 // frontend/src/components/Auth.tsx
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 export function Auth() {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [showCodeInput, setShowCodeInput] = useState(false);
   const { login } = useAuth();
-  const navigate = useNavigate();
 
   const requestCode = async () => {
     try {
@@ -48,7 +46,6 @@ export function Auth() {
       
       if (response.ok) {
         login(email);
-        navigate('/feed');
       } else {
         const errorData = await response.json();
         alert(`Error: ${errorData.detail || 'Verification failed'}`);
@@ -60,15 +57,17 @@ export function Auth() {
 
   return (
     <div>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Enter your email"
-      />
-      <button onClick={requestCode}>Request Code</button>
-
-      {showCodeInput && (
+      {!showCodeInput ? (
+        <>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
+          />
+          <button onClick={requestCode}>Request Code</button>
+        </>
+      ) : (
         <>
           <input
             type="text"

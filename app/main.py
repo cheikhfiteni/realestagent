@@ -1,33 +1,55 @@
 # Basic structure for app/main.py
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.logic import run_job as run_job_logic
-from app.services.authentication import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, router as auth_router
+from app.services.authentication import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, router as auth_router, get_current_user
 from pydantic import BaseModel
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from datetime import datetime
-import uuid
 from sqlalchemy import text
-from app.db.database import engine
+from app.db.database import (
+    engine, get_user_jobs, get_job_with_listings, 
+    create_job_template, create_job, get_pending_jobs
+)
+from app.models.models import User
 from starlette.middleware.sessions import SessionMiddleware
-class JobInput(BaseModel):
-    min_bedrooms: int | None = 4
-    min_square_feet: int | None = 1000  
-    min_bathrooms: float | None = 2.0
-    target_price_bedroom: int | None = 2000
-    criteria: str | None = None
+from uuid import UUID
+from functools import wraps
 
-class JobResult(BaseModel):
-    job_id: str
-    status: str
-    started_at: Optional[datetime]
-    completed_at: Optional[datetime]
-    error: Optional[str]
+class JobInput(BaseModel):
+    name: str
+    min_bedrooms: Optional[int] = 4
+    min_square_feet: Optional[int] = 1000  
+    min_bathrooms: Optional[float] = 2.0
+    target_price_bedroom: Optional[int] = 2000
+    criteria: Optional[str] = None
+
+class JobStubOutput(BaseModel):
+    id: UUID
+    name: str
+    last_updated: datetime
+
+class ListingOutput(BaseModel):
+    id: UUID
+    title: str
+    cover_image_url: str
+    location: str
+    cost: int
+    bedrooms: int
+    bathrooms: float
+    square_footage: int
+    score: float
+    trace: str
 
 app = FastAPI()
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])
-scheduler = BackgroundScheduler()
+scheduler = AsyncIOScheduler(
+    job_defaults={
+        'coalesce': True,
+        'max_instances': 1
+    }
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,10 +65,6 @@ app.add_middleware(
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
 )
 
-# In-memory job queue and results store
-job_queue: Dict[str, JobInput] = {}
-job_results: Dict[str, JobResult] = {}
-
 @app.on_event("startup")
 async def startup_event():
     scheduler.start()
@@ -55,11 +73,29 @@ async def startup_event():
 async def shutdown_event():
     scheduler.shutdown()
 
-# Schedule jobs
-@scheduler.scheduled_job('interval', hours=24)
-async def run_scheduled_jobs():
-    for job_id, job_input in job_queue.items():
-        await run_single_job(job_id, job_input)
+async def run_single_job(job_id: UUID):
+    try:
+        # Run the job using template config
+        await run_job_logic(job_id)
+    except Exception as e:
+        print(f"Error running job {job_id}: {str(e)}")
+
+def scheduled_task(interval_minutes: int):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            return await func(*args, **kwargs)
+        
+        # Add job to scheduler
+        scheduler.add_job(wrapper, 'interval', minutes=interval_minutes)
+        return wrapper
+    return decorator
+
+@scheduled_task(interval_minutes=1)
+async def run_scheduled_jobs_async():
+    pending_jobs = await get_pending_jobs()
+    for job in pending_jobs:
+        await run_single_job(job.id)
 
 # API Endpoints
 
@@ -71,50 +107,39 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-@app.get("/jobs/{job_id}")
-async def get_job(job_id: str):
-    if job_id not in job_results:
-        raise HTTPException(status_code=404, detail="Job not found")
-    return job_results[job_id]
+@app.get("/jobs", response_model=List[JobStubOutput])
+async def get_job_ids(current_user: User = Depends(get_current_user)):
+    """Get all job IDs for the current user"""
+    jobs = await get_user_jobs(current_user.id)
 
-async def run_single_job(job_id: str, job_input: JobInput):
-    try:
-        # Update job status
-        job_results[job_id].status = "running"
-        job_results[job_id].started_at = datetime.now()
-        
-        # Run the job
-        run_job_logic()
-        
-        # Update completion status
-        job_results[job_id].status = "completed"
-        job_results[job_id].completed_at = datetime.now()
-        
-        # Remove from queue after successful completion
-        del job_queue[job_id]
-        
-    except Exception as e:
-        job_results[job_id].status = "failed"
-        job_results[job_id].error = str(e)
-        job_results[job_id].completed_at = datetime.now()
+    print("\033[95m" + str([{"id": job.id, "name": job.name, "last_updated": job.updated_at} for job in jobs]) + "\033[0m")
+    job_stubs = [JobStubOutput(id=job.id, name=job.name, last_updated=job.updated_at or job.created_at) for job in jobs]
+    return job_stubs
+
+@app.get("/jobs/{job_id}", response_model=List[ListingOutput])
+async def get_job(job_id: UUID, current_user: User = Depends(get_current_user)):
+    """Get all scored listings for a specific job"""
+    listings = await get_job_with_listings(job_id, current_user.id)
+    if listings is None:
+        raise HTTPException(status_code=404, detail="Job not found or unauthorized")
+    return listings
 
 @app.post("/jobs/add")
-async def add_job(job_input: JobInput):
-    job_id = str(uuid.uuid4())
-    
-    # Add to queue
-    job_queue[job_id] = job_input
-    
-    # Initialize result object
-    job_results[job_id] = JobResult(
-        job_id=job_id,
-        status="queued",
-        started_at=None,
-        completed_at=None,
-        error=None
-    )
-    await run_single_job(job_id, job_input)
-    return {"status": "queued", "job_id": job_id}
+async def add_job(job_input: JobInput, current_user: User = Depends(get_current_user), background_tasks: BackgroundTasks = BackgroundTasks()):
+    """Create a new job from input template"""
+    try:
+        # Create template
+        template = await create_job_template(current_user.id, job_input.dict())
+        
+        # Create job
+        job = await create_job(current_user.id, template.id, job_input.name)
+        
+        # Run initial job
+        background_tasks.add_task(run_single_job, job.id)
+        
+        return {"status": "created", "job_id": job.id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/db-health")
 async def database_health_check():
@@ -124,3 +149,26 @@ async def database_health_check():
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
+
+@app.get("/changelog")
+async def get_changelog():
+    return [
+        {
+            "id": 1,
+            "date": "2024-01-15",
+            "title": "Initial Release",
+            "description": "Launched the first version of ApartmentFinder with basic search functionality."
+        },
+        {
+            "id": 2, 
+            "date": "2024-01-20",
+            "title": "Search Improvements",
+            "description": "Added filters for bedrooms, bathrooms and square footage. Improved search accuracy."
+        },
+        {
+            "id": 3,
+            "date": "2024-01-25", 
+            "title": "UI Updates",
+            "description": "Refreshed the user interface with a modern design. Added dark mode support."
+        }
+    ]

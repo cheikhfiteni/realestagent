@@ -20,7 +20,7 @@ load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
-EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES = 15
+EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES = 60
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
 # Email settings
@@ -29,9 +29,6 @@ SMTP_PORT = os.getenv("SMTP_PORT")
 SMTP_USER = os.getenv("SMTP_USER")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_FROM = os.getenv("SMTP_FROM")
-
-# Database setup
-database = get_async_db()
 
 # Models
 class EmailVerification(BaseModel):
@@ -193,11 +190,10 @@ async def get_current_user(
         )
     
     # Get user from database
-    user_query = "SELECT * FROM users WHERE email = :email"
-    user = await database.fetch_one(
-        user_query, 
-        values={"email": email}
-    )
+    async with get_async_db() as db:
+        user_query = select(User).where(User.email == email)
+        result = await db.execute(user_query)
+        user = result.scalar_one_or_none()
     
     if user is None:
         raise HTTPException(

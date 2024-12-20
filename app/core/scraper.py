@@ -90,8 +90,17 @@ def _get_information_from_listing(url: str, driver: webdriver.Chrome):
         price_element = driver.find_element(By.CLASS_NAME, "price") 
         price = int(price_element.text.replace("$", "").replace(",", "")) if price_element else 0
         
-        location_element = driver.find_element(By.CLASS_NAME, "mapaddress")
-        location = location_element.text if location_element else ""
+        # More resilient location extraction
+        try:
+            location_element = driver.find_element(By.CLASS_NAME, "mapaddress")
+            location = location_element.text if location_element else ""
+        except:
+            # Fallback location extraction
+            try:
+                location_element = driver.find_element(By.CSS_SELECTOR, "[data-latitude]")
+                location = location_element.get_attribute("data-address") or ""
+            except:
+                location = ""
         
         neighborhood_element = driver.find_element(By.XPATH, "//span[@class='postingtitletext']/span[3]")
         neighborhood = neighborhood_element.text.strip("()") if neighborhood_element else ""

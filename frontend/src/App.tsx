@@ -31,8 +31,9 @@ function App() {
       <BrowserRouter>
         <Navigation />
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
+          <Route path="/welcome" element={<Home />} />
+          <Route path="/" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
+          <Route path="/feed/:jobId" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
           <Route path="/overview" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
           <Route path="/changelog" element={<Changelog />} />
         </Routes>

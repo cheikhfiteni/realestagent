@@ -5,7 +5,8 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+    console.log("Not authenticated, redirecting to home");
+    return <Navigate to="/welcome" replace />;
   }
 
   return <>{children}</>;
