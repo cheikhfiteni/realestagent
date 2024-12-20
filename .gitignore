@@ -6,5 +6,11 @@
 *.db-journal
 .env
 
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
 # temporarily check out the debugging page
 page_structure.html
