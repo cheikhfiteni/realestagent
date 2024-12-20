@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../services/config';
 
 interface ChangelogEntry {
   id: number;
@@ -15,7 +16,7 @@ function Changelog() {
   useEffect(() => {
     const fetchChangelog = async () => {
       try {
-        const response = await fetch('http://localhost:8000/changelog', {
+        const response = await fetch(`${API_BASE_URL}/changelog`, {
           credentials: 'include',
         });
 

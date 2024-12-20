@@ -17,6 +17,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from uuid import UUID
 from functools import wraps
 
+from app.config import FRONTEND_URL
+
 class JobInput(BaseModel):
     name: str
     min_bedrooms: Optional[int] = 4
@@ -53,8 +55,8 @@ scheduler = AsyncIOScheduler(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Your frontend URL
-    allow_credentials=True,                    # Important for cookies
+    allow_origins=[FRONTEND_URL],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

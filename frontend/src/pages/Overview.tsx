@@ -3,6 +3,7 @@ import { Add, Cloud } from '@carbon/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import InputModal from '../components/InputModal';
+import { API_BASE_URL } from '../services/config';
 
 interface Job {
   id: string;
@@ -17,7 +18,7 @@ function Overview() {
 
   const fetchJobs = async () => {
     try {
-      const response = await fetch('http://localhost:8000/jobs', {
+      const response = await fetch(`${API_BASE_URL}/jobs`, {
         credentials: 'include',
       });
       console.log('Response:', response);

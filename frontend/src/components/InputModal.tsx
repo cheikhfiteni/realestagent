@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { API_BASE_URL } from '../services/config';
 
 interface InputModalProps {
   onClose: () => void;
@@ -14,16 +15,16 @@ interface JobInput {
   criteria?: string;
 }
 
-const isValidJobInput = (data: any): data is JobInput => {
-  return (
-    typeof data.name === 'string' &&
-    typeof data.min_bedrooms === 'number' &&
-    typeof data.min_square_feet === 'number' &&
-    typeof data.min_bathrooms === 'number' &&
-    typeof data.target_price_bedroom === 'number' &&
-    (data.criteria === undefined || typeof data.criteria === 'string')
-  );
-};
+// const isValidJobInput = (data: any): data is JobInput => {
+//   return (
+//     typeof data.name === 'string' &&
+//     typeof data.min_bedrooms === 'number' &&
+//     typeof data.min_square_feet === 'number' &&
+//     typeof data.min_bathrooms === 'number' &&
+//     typeof data.target_price_bedroom === 'number' &&
+//     (data.criteria === undefined || typeof data.criteria === 'string')
+//   );
+// };
 
 function InputModal({ onClose, onSuccess }: InputModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
@@ -49,21 +50,8 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Log the type validation result
-    console.log('Is valid job input:', isValidJobInput(formData));
-    console.log('Form data types:', {
-        name: typeof formData.name,
-        min_bedrooms: typeof formData.min_bedrooms,
-        min_square_feet: typeof formData.min_square_feet,
-        min_bathrooms: typeof formData.min_bathrooms,
-        target_price_bedroom: typeof formData.target_price_bedroom,
-        criteria: typeof formData.criteria,
-    });
-    console.log('Raw form data:', formData);
-
     try {
-      const response = await fetch('http://localhost:8000/jobs/add', {
+      const response = await fetch(`${API_BASE_URL}/jobs/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

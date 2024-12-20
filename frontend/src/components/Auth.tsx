@@ -1,6 +1,7 @@
 // frontend/src/components/Auth.tsx
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../services/config';
 
 export function Auth() {
   const [email, setEmail] = useState('');
@@ -11,7 +12,7 @@ export function Auth() {
   const requestCode = async () => {
     try {
       console.log('Sending request with email:', email);
-      const response = await fetch('http://localhost:8000/auth/request-code', {
+      const response = await fetch(`${API_BASE_URL}/auth/request-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -35,7 +36,7 @@ export function Auth() {
 
   const verifyCode = async () => {
     try {
-      const response = await fetch('http://localhost:8000/auth/verify-code', {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

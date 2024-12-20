@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { API_BASE_URL } from '../services/config';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -49,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // True source of auth state, checks backend to see if user is authenticated
   const checkAuth = async () => {
     try {
-      const response = await fetch('http://localhost:8000/auth/users/me', {
+      const response = await fetch(`${API_BASE_URL}/auth/users/me`, {
         credentials: 'include',
       });
       
@@ -78,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      const response = await fetch('http://localhost:8000/auth/logout', {
+      const response = await fetch(`${API_BASE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });

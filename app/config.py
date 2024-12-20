@@ -9,6 +9,8 @@ CRAIGSLIST_URLS = [
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///app/db/listings.db")
 print(f"\033[35mThe database_url is at {DATABASE_URL}\033[0m")
 
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
 class QueryConfig(BaseModel):
     """Configuration for housing search query parameters. All fields are optional."""
     min_bedrooms: int | None = 4

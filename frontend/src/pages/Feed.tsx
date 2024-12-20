@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Cloud } from '@carbon/icons-react';
 import { toast } from 'react-hot-toast';
+import { API_BASE_URL } from '../services/config';
 
 interface Post {
   id: string;
@@ -32,7 +33,7 @@ function Feed() {
   useEffect(() => {
     const fetchListings = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/jobs/${jobId}`, {
+        const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, {
           credentials: 'include',
         });
 
