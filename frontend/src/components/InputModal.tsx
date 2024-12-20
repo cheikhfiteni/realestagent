@@ -59,7 +59,9 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'criteria' ? value : Number(value),
+      [name]: ['min_bedrooms', 'min_square_feet', 'min_bathrooms', 'target_price_bedroom'].includes(name)
+        ? Number(value)
+        : value,
     }));
   };
 
