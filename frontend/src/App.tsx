@@ -33,7 +33,7 @@ function App() {
         <Routes>
           <Route path="/welcome" element={<Home />} />
           <Route path="/" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
-          <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
+          <Route path="/feed/:jobId" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
           <Route path="/overview" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
           <Route path="/changelog" element={<Changelog />} />
         </Routes>

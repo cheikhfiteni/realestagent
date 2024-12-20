@@ -111,9 +111,13 @@ def get_top_listings(limit: int = 10) -> list[Listing]:
 
 async def create_job_template(user_id: UUID, job_input: dict) -> JobTemplate:
     async with get_async_db() as session:
+        template_data = {
+            k: v for k, v in job_input.items() 
+            if k in ['min_bedrooms', 'min_square_feet', 'min_bathrooms', 'target_price_bedroom', 'criteria']
+        }
         template = JobTemplate(
             user_id=user_id,
-            **job_input
+            **template_data
         )
         session.add(template)
         await session.commit()
@@ -122,11 +126,14 @@ async def create_job_template(user_id: UUID, job_input: dict) -> JobTemplate:
 
 async def create_job(user_id: UUID, template_id: UUID, name: str) -> Job:
     async with get_async_db() as session:
+        now = datetime.now()
         job = Job(
             user_id=user_id,
             template_id=template_id,
             name=name,
-            listing_scores={}
+            listing_scores={},
+            created_at=now, 
+            updated_at=now
         )
         session.add(job)
         await session.commit()

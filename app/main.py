@@ -113,7 +113,7 @@ async def get_job_ids(current_user: User = Depends(get_current_user)):
     jobs = await get_user_jobs(current_user.id)
 
     print("\033[95m" + str([{"id": job.id, "name": job.name, "last_updated": job.updated_at} for job in jobs]) + "\033[0m")
-    job_stubs = [JobStubOutput(id=job.id, name=job.name, last_updated=job.updated_at) for job in jobs]
+    job_stubs = [JobStubOutput(id=job.id, name=job.name, last_updated=job.updated_at or job.created_at) for job in jobs]
     return job_stubs
 
 @app.get("/jobs/{job_id}", response_model=List[ListingOutput])
