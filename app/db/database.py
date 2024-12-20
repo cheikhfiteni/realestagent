@@ -2,12 +2,13 @@ import hashlib
 from app.models.models import engine, Listing, Job, JobTemplate, User
 from sqlalchemy.orm import sessionmaker, Session
 from app.config import DATABASE_URL
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, func
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from contextlib import contextmanager, asynccontextmanager
 from typing import List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+from uuid import UUID
 
 # Sync SQLAlchemy engine for migrations and model creation
 engine = create_engine(DATABASE_URL, echo=True)
@@ -40,7 +41,6 @@ async def get_async_db() -> AsyncSession:
             yield session
         finally:
             await session.close()
-
 
 def _listing_hash(text):
     return hashlib.md5(text.encode()).hexdigest()
@@ -109,7 +109,7 @@ def get_top_listings(limit: int = 10) -> list[Listing]:
     finally:
         session.close()
 
-async def create_job_template(user_id: int, job_input: dict) -> JobTemplate:
+async def create_job_template(user_id: UUID, job_input: dict) -> JobTemplate:
     async with get_async_db() as session:
         template = JobTemplate(
             user_id=user_id,
@@ -120,11 +120,12 @@ async def create_job_template(user_id: int, job_input: dict) -> JobTemplate:
         await session.refresh(template)
         return template
 
-async def create_job(user_id: int, template_id: int) -> Job:
+async def create_job(user_id: UUID, template_id: UUID, name: str) -> Job:
     async with get_async_db() as session:
         job = Job(
             user_id=user_id,
             template_id=template_id,
+            name=name,
             listing_scores={}
         )
         session.add(job)
@@ -132,14 +133,14 @@ async def create_job(user_id: int, template_id: int) -> Job:
         await session.refresh(job)
         return job
 
-async def get_user_jobs(user_id: int) -> List[Job]:
+async def get_user_jobs(user_id: UUID) -> List[Job]:
     async with get_async_db() as session:
         result = await session.execute(
             select(Job).where(Job.user_id == user_id)
         )
         return result.scalars().all()
 
-async def get_job_with_listings(job_id: int, user_id: int) -> Optional[Dict]:
+async def get_job_with_listings(job_id: UUID, user_id: UUID) -> Optional[Dict]:
     async with get_async_db() as session:
         # Get job and verify user
         job = await session.get(Job, job_id)
@@ -176,7 +177,7 @@ async def get_job_with_listings(job_id: int, user_id: int) -> Optional[Dict]:
         
         return formatted_listings
 
-async def update_job_listing_score(job_id: int, listing_id: int, score: float, trace: str):
+async def update_job_listing_score(job_id: UUID, listing_id: UUID, score: float, trace: str):
     async with get_async_db() as session:
         job = await session.get(Job, job_id)
         if not job:
@@ -193,9 +194,8 @@ async def update_job_listing_score(job_id: int, listing_id: int, score: float, t
 async def get_pending_jobs() -> List[Job]:
     """Get jobs that haven't been updated in 24 hours"""
     async with get_async_db() as session:
+        one_day_ago = datetime.now() - timedelta(days=1)
         result = await session.execute(
-            select(Job).where(
-                (datetime.now() - Job.updated_at).days >= 1
-            )
+            select(Job).where(Job.updated_at <= one_day_ago)
         )
         return result.scalars().all()

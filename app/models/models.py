@@ -3,6 +3,8 @@ from sqlalchemy import Boolean, create_engine, Column, Integer, String, Float, D
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
 
 from app.config import DATABASE_URL
 
@@ -11,8 +13,8 @@ Base = declarative_base()
 class JobTemplate(Base):
     __tablename__ = 'job_templates'
     
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
     min_bedrooms = Column(Integer, nullable=True)
     min_square_feet = Column(Integer, nullable=True)
     min_bathrooms = Column(Float, nullable=True)
@@ -23,9 +25,10 @@ class JobTemplate(Base):
 class Job(Base):
     __tablename__ = 'jobs'
     
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
-    template_id = Column(Integer, ForeignKey('job_templates.id'))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
+    template_id = Column(UUID(as_uuid=True), ForeignKey('job_templates.id'))
+    name = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     listing_scores = Column(JSON, default=dict)  # Store as {listing_id: {"score": float, "trace": str}}
@@ -36,7 +39,7 @@ class Job(Base):
 class Listing(Base):
     __tablename__ = 'listings'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hash = Column(String, unique=True, nullable=False)
     title = Column(String)
     bedrooms = Column(Integer)
@@ -59,7 +62,7 @@ class Listing(Base):
     
 class VerificationCode(Base):
     __tablename__ = "verification_codes"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String, index=True)
     code = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -68,7 +71,7 @@ class VerificationCode(Base):
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String, unique=True, index=True)
     is_active = Column(Boolean, default=True)
 

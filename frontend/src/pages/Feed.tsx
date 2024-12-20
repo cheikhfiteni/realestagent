@@ -4,7 +4,7 @@ import { Cloud } from '@carbon/icons-react';
 import { toast } from 'react-hot-toast';
 
 interface Post {
-  id: number;
+  id: string;
   title: string;
   cover_image_url: string;
   location: string;

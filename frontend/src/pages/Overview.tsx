@@ -5,10 +5,9 @@ import { toast } from 'react-hot-toast';
 import InputModal from '../components/InputModal';
 
 interface Job {
-  id: number;
+  id: string;
   name: string;
   last_updated: string;
-  // Add other job properties as needed
 }
 
 function Overview() {
@@ -21,8 +20,10 @@ function Overview() {
       const response = await fetch('http://localhost:8000/jobs', {
         credentials: 'include',
       });
+      console.log('Response:', response);
       if (!response.ok) throw new Error('Failed to fetch jobs');
       const data = await response.json();
+      console.log('Fetched jobs:', data);
       setJobs(data);
     } catch (error) {
       toast.error('Failed to fetch jobs');
@@ -33,11 +34,12 @@ function Overview() {
     fetchJobs();
   }, []);
 
-  const handleJobClick = (jobId: number) => {
+  const handleJobClick = (jobId: string) => {
     navigate(`/feed/${jobId}`);
   };
 
   const handleAddJobSuccess = () => {
+    console.log('Job added successfully');
     setIsModalOpen(false);
     fetchJobs();
     toast.success('Job added successfully');

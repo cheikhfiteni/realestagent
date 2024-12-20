@@ -6,6 +6,7 @@ interface InputModalProps {
 }
 
 interface JobInput {
+  name: string;
   min_bedrooms: number;
   min_square_feet: number;
   min_bathrooms: number;
@@ -16,6 +17,7 @@ interface JobInput {
 function InputModal({ onClose, onSuccess }: InputModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState<JobInput>({
+    name: '',
     min_bedrooms: 4,
     min_square_feet: 1000,
     min_bathrooms: 2.0,
@@ -67,6 +69,20 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
         <h2 className="text-2xl font-bold mb-4">Create New Job</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Job Name
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
+              />
+            </label>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Minimum Bedrooms

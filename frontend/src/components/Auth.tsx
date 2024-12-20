@@ -48,7 +48,6 @@ export function Auth() {
       
       if (response.ok) {
         login(email);
-        navigate('/feed');
       } else {
         const errorData = await response.json();
         alert(`Error: ${errorData.detail || 'Verification failed'}`);

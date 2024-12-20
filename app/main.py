@@ -1,13 +1,12 @@
 # Basic structure for app/main.py
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.logic import run_job as run_job_logic
 from app.services.authentication import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, router as auth_router, get_current_user
 from pydantic import BaseModel
 from typing import Dict, Optional, List
 from datetime import datetime
-import uuid
 from sqlalchemy import text
 from app.db.database import (
     engine, get_user_jobs, get_job_with_listings, 
@@ -15,16 +14,24 @@ from app.db.database import (
 )
 from app.models.models import User
 from starlette.middleware.sessions import SessionMiddleware
+from uuid import UUID
+from functools import wraps
 
 class JobInput(BaseModel):
+    name: str
     min_bedrooms: Optional[int] = 4
     min_square_feet: Optional[int] = 1000  
     min_bathrooms: Optional[float] = 2.0
     target_price_bedroom: Optional[int] = 2000
     criteria: Optional[str] = None
 
+class JobStubOutput(BaseModel):
+    id: UUID
+    name: str
+    last_updated: datetime
+
 class ListingOutput(BaseModel):
-    id: int
+    id: UUID
     title: str
     cover_image_url: str
     location: str
@@ -37,7 +44,12 @@ class ListingOutput(BaseModel):
 
 app = FastAPI()
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])
-scheduler = BackgroundScheduler()
+scheduler = AsyncIOScheduler(
+    job_defaults={
+        'coalesce': True,
+        'max_instances': 1
+    }
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -61,15 +73,26 @@ async def startup_event():
 async def shutdown_event():
     scheduler.shutdown()
 
-async def run_single_job(job_id: int):
+async def run_single_job(job_id: UUID):
     try:
         # Run the job using template config
         await run_job_logic(job_id)
     except Exception as e:
         print(f"Error running job {job_id}: {str(e)}")
 
-@scheduler.scheduled_job('interval', hours=24)
-async def run_scheduled_jobs():
+def scheduled_task(interval_minutes: int):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            return await func(*args, **kwargs)
+        
+        # Add job to scheduler
+        scheduler.add_job(wrapper, 'interval', minutes=interval_minutes)
+        return wrapper
+    return decorator
+
+@scheduled_task(interval_minutes=1)
+async def run_scheduled_jobs_async():
     pending_jobs = await get_pending_jobs()
     for job in pending_jobs:
         await run_single_job(job.id)
@@ -84,14 +107,17 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-@app.get("/jobs", response_model=List[int])
+@app.get("/jobs", response_model=List[JobStubOutput])
 async def get_job_ids(current_user: User = Depends(get_current_user)):
     """Get all job IDs for the current user"""
     jobs = await get_user_jobs(current_user.id)
-    return [job.id for job in jobs]
+
+    print("\033[95m" + str([job.id for job in jobs]) + "\033[0m")
+    job_stubs = [JobStubOutput(id=job.id, name=job.template.criteria, last_updated=job.updated_at) for job in jobs]
+    return job_stubs
 
 @app.get("/jobs/{job_id}", response_model=List[ListingOutput])
-async def get_job(job_id: int, current_user: User = Depends(get_current_user)):
+async def get_job(job_id: UUID, current_user: User = Depends(get_current_user)):
     """Get all scored listings for a specific job"""
     listings = await get_job_with_listings(job_id, current_user.id)
     if listings is None:
@@ -99,17 +125,17 @@ async def get_job(job_id: int, current_user: User = Depends(get_current_user)):
     return listings
 
 @app.post("/jobs/add")
-async def add_job(job_input: JobInput, current_user: User = Depends(get_current_user)):
+async def add_job(job_input: JobInput, current_user: User = Depends(get_current_user), background_tasks: BackgroundTasks = BackgroundTasks()):
     """Create a new job from input template"""
     try:
         # Create template
         template = await create_job_template(current_user.id, job_input.dict())
         
         # Create job
-        job = await create_job(current_user.id, template.id)
+        job = await create_job(current_user.id, template.id, job_input.name)
         
         # Run initial job
-        await run_single_job(job.id)
+        background_tasks.add_task(run_single_job, job.id)
         
         return {"status": "created", "job_id": job.id}
     except Exception as e:
