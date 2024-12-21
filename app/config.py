@@ -5,8 +5,13 @@ CRAIGSLIST_URLS = [
     "https://sfbay.craigslist.org/search/apa?min_bathrooms=2&min_bedrooms=4&postal=94142&search_distance=1#search=1~gallery~0~0",
 ]
 
+
+def normalize_db_url(url: str) -> str:
+    """Ensure database URL uses postgresql:// instead of postgres:// and handles SSL parameters"""
+    return url if not url else url.replace('postgres://', 'postgresql://', 1)
+
 # Database settings
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///app/db/listings.db")
+DATABASE_URL = normalize_db_url(os.getenv("DATABASE_URL", "sqlite:///app/db/listings.db"))
 print(f"\033[35mThe database_url is at {DATABASE_URL}\033[0m")
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")

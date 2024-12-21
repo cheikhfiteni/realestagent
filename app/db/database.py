@@ -16,7 +16,7 @@ SessionLocal = sessionmaker(bind=engine)
 
 # Async engine
 async_engine = create_async_engine(
-    DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://')
+    DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://').replace("?sslmode=", "?ssl=")
 )
 AsyncSessionLocal = sessionmaker(
     async_engine, 
