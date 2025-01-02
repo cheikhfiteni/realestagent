@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import os
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from contextlib import contextmanager
@@ -20,12 +21,19 @@ class DriverManager:
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
             chrome_options.binary_location = "/usr/bin/chromium"
-            # ... other options ...
+            chrome_options.add_argument('--disable-gpu')
+            
+            if os.environ.get("DEBUG"):
+                chrome_options.add_argument('--enable-logging')
+                chrome_options.add_argument('--v=1')
+                chrome_options.add_argument('--remote-debugging-port=9222')
+                chrome_options.add_argument('--remote-debugging-address=0.0.0.0')
+                chrome_options.add_argument('--enable-crash-reporter')
 
             self._driver = webdriver.Remote(
                 command_executor='http://selenium:4444/wd/hub',
                 options=chrome_options
-            )
+            )     
         return self._driver
 
     def quit_driver(self):
