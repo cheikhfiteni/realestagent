@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Generator, Optional, List, Dict, Any
-from datetime import datetime
+from typing import Generator, Optional
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from contextlib import contextmanager

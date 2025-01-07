@@ -4,9 +4,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
 import json
-import time
+
 import re
-from typing import Generator, Optional
+import asyncio
+from typing import AsyncGenerator, Optional
 from app.models.models import Listing
 from app.core.base_scraper import BaseScraper, ScrapingConfig
 from app.db.database import _listing_hash
@@ -29,14 +30,14 @@ class CraigslistScraper(BaseScraper):
         query_string = "&".join(params)
         return f"{self.base_url}?{query_string}"
 
-    def get_listing_urls(self) -> Generator[str, None, None]:
+    async def get_listing_urls(self) -> AsyncGenerator[str, None]:
         page = 0
         visited_urls = set()
         
         while True:
             current_url = re.sub(r'gallery~\d+~0', f'gallery~{page}~0', self.get_search_url())
             self.driver.get(current_url)
-            time.sleep(self.sleep_time)
+            await asyncio.sleep(self.sleep_time)
             
             if self.driver.current_url in visited_urls:
                 break
@@ -57,11 +58,12 @@ class CraigslistScraper(BaseScraper):
                     yield link
                     
                 page += 1
-                time.sleep(self.sleep_time)
+                await asyncio.sleep(self.sleep_time)
                 
             except TimeoutException:
                 break
 
+    @staticmethod
     def _extract_housing_details(driver):
         try:
             attrs_element = driver.find_element(By.CLASS_NAME, "mapAndAttrs")
@@ -95,6 +97,7 @@ class CraigslistScraper(BaseScraper):
         except Exception:
             return 0, 0, 0
     
+    @staticmethod
     def _extract_image_urls(driver) -> list[str]:
         """Extract image URLs from the listing page."""
         try:
@@ -115,6 +118,7 @@ class CraigslistScraper(BaseScraper):
             print(f"Error extracting images: {str(e)}")
             return []
 
+    @staticmethod
     def _normalize_description(html_content: str) -> str:
         """Convert HTML description to clean text with normalized newlines."""
         # Remove any special divs like print-information
@@ -127,7 +131,7 @@ class CraigslistScraper(BaseScraper):
         text = re.sub(r'\n\s*\n', '\n\n', text.strip())
         return text
 
-    def scrape_listing(self, url: str) -> Optional[Listing]:
+    async def scrape_listing(self, url: str) -> Optional[Listing]:
         """Extract listing information from a Craigslist posting."""
         try:
             self.driver.get(url)
@@ -166,6 +170,8 @@ class CraigslistScraper(BaseScraper):
             bedrooms, bathrooms, square_footage = self._extract_housing_details(self.driver)
             image_urls = self._extract_image_urls(self.driver)
 
+            await asyncio.sleep(self.sleep_time)  # Add small delay between requests
+
             return Listing(
                 hash=_listing_hash(post_id),
                 title=title,
@@ -194,3 +200,15 @@ class CraigslistScraper(BaseScraper):
         if self.config.min_square_feet and listing.square_footage < self.config.min_square_feet:
             return False
         return True
+
+    async def scrape(self) -> AsyncGenerator[Listing, None]:
+        """Main scraping method that yields valid listings."""
+        try:
+            async for url in self.get_listing_urls():
+                listing = await self.scrape_listing(url)
+                if listing and self.validate_listing(listing):
+                    # Create the listing object without any database operations
+                    yield listing
+        except Exception as e:
+            self.logger.error(f"Error in scrape method: {str(e)}")
+            raise
