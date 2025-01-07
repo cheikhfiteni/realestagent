@@ -204,11 +204,20 @@ class CraigslistScraper(BaseScraper):
     async def scrape(self) -> AsyncGenerator[Listing, None]:
         """Main scraping method that yields valid listings."""
         try:
+            self.logger.info("Starting scraping process")
             async for url in self.get_listing_urls():
+                self.logger.info(f"Scraping listing from URL: {url}")
                 listing = await self.scrape_listing(url)
-                if listing and self.validate_listing(listing):
-                    # Create the listing object without any database operations
-                    yield listing
+                if listing:
+                    self.logger.info(f"Successfully scraped listing: {listing.title}")
+                    if self.validate_listing(listing):
+                        self.logger.info(f"Listing passed validation: {listing.title}")
+                        # Create the listing object without any database operations
+                        yield listing
+                    else:
+                        self.logger.info(f"Listing failed validation: {listing.title}")
+                else:
+                    self.logger.warning(f"Failed to scrape listing from URL: {url}")
         except Exception as e:
             self.logger.error(f"Error in scrape method: {str(e)}")
             raise

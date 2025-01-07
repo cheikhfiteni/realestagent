@@ -18,12 +18,18 @@ async def batch_database_save(upsert_listings, job_id):
     return []
 
 async def scrape_listings(job: Job):
+    print(f"[DEBUG] Starting scrape_listings for job {job.id}")
+    print(f"[DEBUG] Job template: {job.template}")
     config = ScrapingConfig.from_job_template(job.template)
-    stored_hashes = get_stored_listing_hashes()
+    print(f"[DEBUG] Created scraping config: min_price={config.min_price}, max_price={config.max_price}, min_bedrooms={config.min_bedrooms}")
     
+    stored_hashes = get_stored_listing_hashes()
+    print(f"[DEBUG] Retrieved {len(stored_hashes)} stored listing hashes")
+    
+    print(f"[DEBUG] Initializing CraigslistScraper for job {job.id}")
     with CraigslistScraper.create(config) as scraper:
         upsert_listings = []
-        
+        print(f"[DEBUG] Starting scraping loop for job {job.id}")
         async for listing in scraper.scrape():
             if listing.hash not in stored_hashes:
                 upsert_listings.append(listing)

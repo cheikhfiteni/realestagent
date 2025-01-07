@@ -33,8 +33,8 @@ class Job(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     listing_scores = Column(JSON, default=dict)  # Store as {listing_id: {"score": float, "trace": str}}
     
-    template = relationship("JobTemplate")
-    user = relationship("User")
+    template = relationship("JobTemplate", lazy="joined")
+    user = relationship("User", lazy="selectin")
 
 class Listing(Base):
     __tablename__ = 'listings'
