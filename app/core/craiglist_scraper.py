@@ -57,7 +57,7 @@ class CraigslistScraper(BaseScraper):
         visited_urls = set()
         
         while True:
-            current_url = re.sub(r'gallery~\d+~0', f'gallery~{page}~0', self.get_search_url())
+            current_url = f"{self.get_search_url()}#search=1~gallery~{page}~0"
             print(f"[DEBUG] Navigating to page {page} at URL: {current_url}")
             self.driver.get(current_url)
             await asyncio.sleep(self.sleep_time)
@@ -113,10 +113,12 @@ class CraigslistScraper(BaseScraper):
                         except ValueError:
                             pass
                     elif "ba" in text:
+                        print(f"\033[33mBathroom found in text: {text}\033[0m")
                         try:
-                            bathrooms = float(text.split("ba")[0])
+                            bath_text = text.split("ba")[0].strip()
+                            bathrooms = float(bath_text)
                         except ValueError:
-                            pass
+                            print(f"[DEBUG] Failed to parse bathroom value from: '{text}'")
                     elif "ft" in text:
                         try:
                             square_footage = int(text.split("ft")[0])
@@ -223,6 +225,7 @@ class CraigslistScraper(BaseScraper):
 
     def validate_listing(self, listing: Listing) -> bool:
         """Validate listing meets minimum criteria"""
+        print(f"[DEBUG] Validating listing: {listing.title}, {listing.price}, {listing.bedrooms}, {listing.bathrooms}, {listing.square_footage}")
         if self.config.min_bedrooms and listing.bedrooms < self.config.min_bedrooms:
             return False
         if self.config.min_bathrooms and listing.bathrooms < self.config.min_bathrooms:

@@ -74,6 +74,13 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate required fields
+    if (!formData.name || !formData.location) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/jobs/add`, {
         method: 'POST',
@@ -109,7 +116,7 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Job Name
+              Job Name <span className="text-red-500">*</span>
               <input
                 type="text"
                 name="name"
@@ -123,12 +130,13 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Location
+              Location <span className="text-red-500">*</span>
               <select
                 name="location"
                 value={formData.location}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
               >
                 <option value="">Select a location</option>
                 {locations.map((location) => (
