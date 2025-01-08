@@ -15,6 +15,7 @@ DATABASE_URL = normalize_db_url(os.getenv("DATABASE_URL", "sqlite:///app/db/list
 print(f"\033[35mThe database_url is at {DATABASE_URL}\033[0m")
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+SELENIUM_HOST = os.getenv("SELENIUM_HOST", "http://selenium")
 
 class QueryConfig(BaseModel):
     """Configuration for housing search query parameters. All fields are optional."""

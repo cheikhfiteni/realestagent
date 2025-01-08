@@ -1,0 +1,35 @@
+app = "realestagent-selenium"
+primary_region = "sjc"
+
+[build]
+  image = "seleniarm/standalone-chromium:4.8.3"
+
+[env]
+  SE_NODE_MAX_SESSIONS = "1"
+  SE_NODE_SESSION_TIMEOUT = "300"
+  SE_START_XVFB = "true"
+  GRID_DEBUG = "false"
+  SE_LOG_LEVEL = "WARN"
+
+[[services]]
+  internal_port = 4444
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = "4444"
+
+[http_service]
+  internal_port = 4444
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+  # Disable public access
+  internal_only = true
+
+[[vm]]
+  memory = "2gb"
+  cpu_kind = "shared"
+  cpus = 1 

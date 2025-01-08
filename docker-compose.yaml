@@ -56,7 +56,6 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - SELENIUM_HOST=selenium-grid
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
       - LOG_LEVEL=INFO
       - PORT=8000

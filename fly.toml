@@ -8,6 +8,9 @@ primary_region = 'sjc'
 
 [build]
 
+[env]
+  SELENIUM_HOST = "https://realestagent-selenium.internal"
+
 [http_service]
   internal_port = 8000
   force_https = true

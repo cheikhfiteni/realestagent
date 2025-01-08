@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 from uuid import UUID
 from app.models.models import Listing, JobTemplate
+from app.config import SELENIUM_HOST
 import logging
 import os
 
@@ -28,15 +29,17 @@ class DriverManager:
             chrome_options.binary_location = "/usr/bin/chromium"
             chrome_options.add_argument('--disable-gpu')
             
-
             chrome_options.add_argument('--enable-logging')
             chrome_options.add_argument('--v=1')
             chrome_options.add_argument('--remote-debugging-port=9222')
             chrome_options.add_argument('--remote-debugging-address=0.0.0.0')
             chrome_options.add_argument('--enable-crash-reporter')
 
+            selenium_url = f'{SELENIUM_HOST}:4444/wd/hub'
+            print(f"\033[35mConnecting to Selenium at: {selenium_url}\033[0m")
+
             self._driver = webdriver.Remote(
-                command_executor='http://selenium:4444/wd/hub',
+                command_executor=selenium_url,
                 options=chrome_options
             )     
         return self._driver
