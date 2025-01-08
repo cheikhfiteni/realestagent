@@ -97,60 +97,87 @@ class CraigslistScraper(BaseScraper):
     
     @staticmethod
     def _extract_housing_details(driver):
+        """Extract housing details with improved reliability."""
+        bedrooms = bathrooms = square_footage = 0
+        
         try:
-            attrs_element = driver.find_element(By.CLASS_NAME, "mapAndAttrs")
-            attr_groups = attrs_element.find_elements(By.CLASS_NAME, "attrgroup")
-            
-            bedrooms = 0
-            bathrooms = 0 
-            square_footage = 0
-            
-            for group in attr_groups:
-                spans = group.find_elements(By.TAG_NAME, "span")
-                for span in spans:
-                    text = span.text.lower()
-                    if "br" in text:
-                        try:
-                            bedrooms = int(text.split("br")[0])
-                        except ValueError:
-                            pass
-                    elif "ba" in text:
-                        print(f"\033[33mBathroom found in text: {text}\033[0m")
-                        try:
-                            bath_text = text.split("ba")[0].strip()
-                            bathrooms = float(bath_text)
-                        except ValueError:
-                            print(f"[DEBUG] Failed to parse bathroom value from: '{text}'")
-                    elif "ft" in text:
-                        try:
-                            square_footage = int(text.split("ft")[0])
-                        except ValueError:
-                            pass
-            
-            return bedrooms, bathrooms, square_footage
-        except Exception:
-            return 0, 0, 0
+            # Look for housing info in multiple possible locations
+            for selector in [
+                ".attrgroup span",  # Primary housing details
+                ".housing",  # Alternate location
+                "[data-housing]"  # Data attribute fallback
+            ]:
+                elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    text = element.text.lower()
+                    
+                    # Extract bedrooms
+                    br_match = re.search(r'(\d+)\s*br', text)
+                    if br_match and not bedrooms:
+                        bedrooms = int(br_match.group(1))
+                    
+                    # Extract bathrooms
+                    ba_match = re.search(r'(\d+(?:\.\d+)?)\s*ba', text)
+                    if ba_match and not bathrooms:
+                        bathrooms = float(ba_match.group(1))
+                    
+                    # Extract square footage - now handling decimals
+                    sqft_match = re.search(r'(\d+(?:\.\d+)?)\s*ft', text)
+                    if sqft_match and not square_footage:
+                        # Round to nearest integer
+                        square_footage = round(float(sqft_match.group(1)))
+                
+                # If we found all details, break early
+                if bedrooms and bathrooms and square_footage:
+                    break
+        
+        except Exception as e:
+            print(f"Error extracting housing details: {str(e)}")
+        
+        return bedrooms, bathrooms, square_footage
     
     @staticmethod
     def _extract_image_urls(driver) -> list[str]:
         """Extract image URLs from the listing page."""
+        image_urls = []
         try:
-            # Find the script tag containing image data under the multiimage div
-            multiimage_div = driver.find_element(By.CLASS_NAME, "iw.multiimage")
-            script_element = multiimage_div.find_element(By.TAG_NAME, "script")
-            script_text = script_element.get_attribute("innerHTML")
-            
-            if "var imgList = " in script_text:
-                # Extract the JSON array from the script
-                json_str = script_text.split("var imgList = ")[1].strip().rstrip(";")
-                img_list = json.loads(json_str)
+            # Try multiple selectors for different image scenarios
+            for selector in [
+                ".iw.multiimage",  # Multiple images case
+                "#thumbs",         # Single image case
+                ".gallery"         # Alternative gallery class
+            ]:
+                try:
+                    container = driver.find_element(By.CSS_SELECTOR, selector)
+                    
+                    # For multiple images case
+                    script_elements = container.find_elements(By.TAG_NAME, "script")
+                    for script in script_elements:
+                        script_text = script.get_attribute("innerHTML")
+                        if "var imgList = " in script_text:
+                            json_str = script_text.split("var imgList = ")[1].strip().rstrip(";")
+                            img_list = json.loads(json_str)
+                            return [img["url"].replace("600x450", "1200x900") for img in img_list]
+                    
+                    # For single image case
+                    img_elements = container.find_elements(By.TAG_NAME, "img")
+                    if img_elements:
+                        for img in img_elements:
+                            src = img.get_attribute("src")
+                            if src:
+                                # Convert to high quality if possible
+                                image_urls.append(src.replace("600x450", "1200x900"))
+                        if image_urls:
+                            return image_urls
                 
-                # Get the high quality image URLs
-                return [img["url"].replace("600x450", "1200x900") for img in img_list]
-            return []
+                except Exception:
+                    continue
+            
+            return image_urls  
+            
         except Exception as e:
             print(f"Error extracting images: {str(e)}")
-            return []
+            return []  # Return empty list on any error
 
     @staticmethod
     def _normalize_description(html_content: str) -> str:
