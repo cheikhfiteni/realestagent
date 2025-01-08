@@ -3,6 +3,8 @@ from typing import Generator, Optional
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from contextlib import contextmanager
+
+from uuid import UUID
 from app.models.models import Listing, JobTemplate
 import logging
 import os
@@ -26,12 +28,12 @@ class DriverManager:
             chrome_options.binary_location = "/usr/bin/chromium"
             chrome_options.add_argument('--disable-gpu')
             
-            if os.environ.get("DEBUG"):
-                chrome_options.add_argument('--enable-logging')
-                chrome_options.add_argument('--v=1')
-                chrome_options.add_argument('--remote-debugging-port=9222')
-                chrome_options.add_argument('--remote-debugging-address=0.0.0.0')
-                chrome_options.add_argument('--enable-crash-reporter')
+
+            chrome_options.add_argument('--enable-logging')
+            chrome_options.add_argument('--v=1')
+            chrome_options.add_argument('--remote-debugging-port=9222')
+            chrome_options.add_argument('--remote-debugging-address=0.0.0.0')
+            chrome_options.add_argument('--enable-crash-reporter')
 
             self._driver = webdriver.Remote(
                 command_executor='http://selenium:4444/wd/hub',
@@ -48,31 +50,36 @@ class ScrapingConfig:
     """Configuration class for scraper parameters"""
     def __init__(
         self,
+        template_id: UUID,
         min_price: Optional[int] = None,
         max_price: Optional[int] = None,
         min_bedrooms: Optional[int] = None,
         min_bathrooms: Optional[float] = None,
         min_square_feet: Optional[int] = None,
         location: Optional[str] = None,
-        max_listings: int = 100,
+        zipcode: Optional[str] = None,
         search_radius_miles: float = 10.0
     ):
+        self.template_id = template_id
         self.min_price = min_price
         self.max_price = max_price
         self.min_bedrooms = min_bedrooms
         self.min_bathrooms = min_bathrooms
         self.min_square_feet = min_square_feet
         self.location = location
-        self.max_listings = max_listings
+        self.zipcode = zipcode
         self.search_radius_miles = search_radius_miles
-
     @classmethod
     def from_job_template(cls, template: JobTemplate) -> 'ScrapingConfig':
         """Create config from a job template"""
         return cls(
+            template_id=template.id,
             min_bedrooms=template.min_bedrooms,
             min_bathrooms=template.min_bathrooms,
             min_square_feet=template.min_square_feet,
+            location=template.location,
+            zipcode=template.zipcode,
+            search_radius_miles=template.search_distance_miles
         )
 
 class BaseScraper(ABC):
@@ -80,6 +87,12 @@ class BaseScraper(ABC):
         self._driver_manager = DriverManager.get_instance()
         self.config = config
         self.logger = logging.getLogger(self.__class__.__name__)
+        
+        console_handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        console_handler.setFormatter(formatter)
+        self.logger.addHandler(console_handler)
+        self.logger.setLevel(logging.INFO)
 
     @property
     def driver(self):

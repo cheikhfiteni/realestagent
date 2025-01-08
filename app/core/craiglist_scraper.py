@@ -17,18 +17,40 @@ class CraigslistScraper(BaseScraper):
         super().__init__(config)
         self.base_url = "https://craigslist.org/search/apa"
         self.sleep_time = 0.2
+    def __enter__(self):
+        print(f"[DEBUG] Entering CraigslistScraper context manager for job {self.config.job_id}")
+        return self
+    def __exit__(self, exc_type, exc_value, traceback):
+        print(f"[DEBUG] Exiting CraigslistScraper context manager for job {self.config.job_id}")
 
     def get_search_url(self) -> str:
+        # Build base URL with location if provided
+        base = "https://"
+        if self.config.location:
+            base += f"{self.config.location.lower()}."
+        base += "craigslist.org/search/apa"
+
+        # Build query parameters
         params = []
+        if self.config.min_bathrooms:
+            params.append(f"min_bathrooms={int(self.config.min_bathrooms)}")
         if self.config.min_bedrooms:
-            params.append(f"min_bedrooms={self.config.min_bedrooms}")
+            params.append(f"min_bedrooms={int(self.config.min_bedrooms)}")
         if self.config.min_price:
-            params.append(f"min_price={self.config.min_price}")
+            params.append(f"min_price={int(self.config.min_price)}")
         if self.config.max_price:
             params.append(f"max_price={self.config.max_price}")
-        
+        if self.config.zipcode:
+            params.append(f"postal={self.config.zipcode}")
+        if self.config.search_radius_miles:
+            params.append(f"search_distance={self.config.search_radius_miles}")
+
+        # Combine URL parts
         query_string = "&".join(params)
-        return f"{self.base_url}?{query_string}"
+        url = f"{base}?{query_string}"
+
+        print(f"[DEBUG] Constructed search URL: {url}")
+        return url
 
     async def get_listing_urls(self) -> AsyncGenerator[str, None]:
         page = 0
@@ -36,15 +58,19 @@ class CraigslistScraper(BaseScraper):
         
         while True:
             current_url = re.sub(r'gallery~\d+~0', f'gallery~{page}~0', self.get_search_url())
+            print(f"[DEBUG] Navigating to page {page} at URL: {current_url}")
             self.driver.get(current_url)
             await asyncio.sleep(self.sleep_time)
             
             if self.driver.current_url in visited_urls:
+                print(f"[DEBUG] Already visited URL {self.driver.current_url}, breaking loop")
                 break
                 
             visited_urls.add(self.driver.current_url)
+            print(f"[DEBUG] Added {self.driver.current_url} to visited URLs")
             
             try:
+                print("[DEBUG] Waiting for gallery cards to load...")
                 WebDriverWait(self.driver, 10).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, ".gallery-card"))
                 )
@@ -53,14 +79,18 @@ class CraigslistScraper(BaseScraper):
                     element.find_element(By.CSS_SELECTOR, "a").get_attribute("href") 
                     for element in self.driver.find_elements(By.CSS_SELECTOR, ".gallery-card")
                 ]
+                print(f"[DEBUG] Found {len(links)} listing links on page {page}")
                 
                 for link in links:
+                    print(f"[DEBUG] Yielding listing URL: {link}")
                     yield link
                     
                 page += 1
+                print(f"[DEBUG] Moving to page {page}")
                 await asyncio.sleep(self.sleep_time)
                 
             except TimeoutException:
+                print("[DEBUG] Timeout waiting for gallery cards, breaking loop")
                 break
 
     @staticmethod
@@ -203,6 +233,7 @@ class CraigslistScraper(BaseScraper):
 
     async def scrape(self) -> AsyncGenerator[Listing, None]:
         """Main scraping method that yields valid listings."""
+        print(f"[DEBUG] In the craiglist scraping loop for the task {self.config.template_id}")
         try:
             self.logger.info("Starting scraping process")
             async for url in self.get_listing_urls():

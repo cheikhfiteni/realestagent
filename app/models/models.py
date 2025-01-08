@@ -20,6 +20,9 @@ class JobTemplate(Base):
     min_bathrooms = Column(Float, nullable=True)
     target_price_bedroom = Column(Integer, nullable=True)
     criteria = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    zipcode = Column(String, nullable=True)
+    search_distance_miles = Column(Float, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class Job(Base):

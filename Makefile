@@ -1,5 +1,9 @@
 .PHONY: migrate-new migrate-up migrate-down migrate-status migrate-history
 
+migrate-init:
+	docker exec -it realestagent-web-1 alembic -c app/alembic.ini stamp head
+	docker exec -it realestagent-web-1 alembic -c app/alembic.ini upgrade head
+
 migrate-new:
 	@if [ "$(m)" = "" ]; then \
 		echo "Please provide a migration message"; \

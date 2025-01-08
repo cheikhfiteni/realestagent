@@ -113,7 +113,8 @@ async def create_job_template(user_id: UUID, job_input: dict) -> JobTemplate:
     async with get_async_db() as session:
         template_data = {
             k: v for k, v in job_input.items() 
-            if k in ['min_bedrooms', 'min_square_feet', 'min_bathrooms', 'target_price_bedroom', 'criteria']
+            if k in ['min_bedrooms', 'min_square_feet', 'min_bathrooms', 'target_price_bedroom', 'criteria',
+                    'location', 'zipcode', 'search_distance_miles']
         }
         template = JobTemplate(
             user_id=user_id,
