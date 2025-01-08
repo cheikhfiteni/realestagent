@@ -18,17 +18,6 @@ interface JobInput {
   search_distance_miles?: number;
 }
 
-// const isValidJobInput = (data: any): data is JobInput => {
-//   return (
-//     typeof data.name === 'string' &&
-//     typeof data.min_bedrooms === 'number' &&
-//     typeof data.min_square_feet === 'number' &&
-//     typeof data.min_bathrooms === 'number' &&
-//     typeof data.target_price_bedroom === 'number' &&
-//     (data.criteria === undefined || typeof data.criteria === 'string')
-//   );
-// };
-
 function InputModal({ onClose, onSuccess }: InputModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [locations, setLocations] = useState<string[]>([]);

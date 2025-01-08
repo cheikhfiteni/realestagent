@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Generator, Optional
+from typing import AsyncGenerator, Generator, List, Optional
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from contextlib import contextmanager
@@ -104,7 +104,7 @@ class BaseScraper(ABC):
         pass
 
     @abstractmethod
-    def get_listing_urls(self, base_search_url: str) -> Generator[str, None, None]:
+    def get_listing_urls(self, base_search_url: str) -> List[str]:
         """Extract listing URLs from search results pages"""
         pass
 
@@ -118,7 +118,7 @@ class BaseScraper(ABC):
         """Validate if a listing meets the minimum criteria"""
         pass
 
-    def scrape(self) -> Generator[Listing, None, None]:
+    async def scrape(self) -> AsyncGenerator[Listing, None]:
         """Main scraping workflow"""
         try:
             search_url = self.get_search_url()

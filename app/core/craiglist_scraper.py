@@ -7,7 +7,7 @@ import json
 
 import re
 import asyncio
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, List, Optional
 from app.models.models import Listing
 from app.core.base_scraper import BaseScraper, ScrapingConfig
 from app.db.database import _listing_hash
@@ -52,9 +52,10 @@ class CraigslistScraper(BaseScraper):
         print(f"[DEBUG] Constructed search URL: {url}")
         return url
 
-    async def get_listing_urls(self) -> AsyncGenerator[str, None]:
+    async def get_listing_urls(self) -> List[str]:
         page = 0
         visited_urls = set()
+        all_links = []
         
         while True:
             current_url = f"{self.get_search_url()}#search=1~gallery~{page}~0"
@@ -81,9 +82,7 @@ class CraigslistScraper(BaseScraper):
                 ]
                 print(f"[DEBUG] Found {len(links)} listing links on page {page}")
                 
-                for link in links:
-                    print(f"[DEBUG] Yielding listing URL: {link}")
-                    yield link
+                all_links.extend(links)
                     
                 page += 1
                 print(f"[DEBUG] Moving to page {page}")
@@ -92,7 +91,10 @@ class CraigslistScraper(BaseScraper):
             except TimeoutException:
                 print("[DEBUG] Timeout waiting for gallery cards, breaking loop")
                 break
-
+        
+        print(f"[DEBUG] Total links found: {len(all_links)}")
+        return all_links
+    
     @staticmethod
     def _extract_housing_details(driver):
         try:
@@ -239,7 +241,9 @@ class CraigslistScraper(BaseScraper):
         print(f"[DEBUG] In the craiglist scraping loop for the task {self.config.template_id}")
         try:
             self.logger.info("Starting scraping process")
-            async for url in self.get_listing_urls():
+            urls = await self.get_listing_urls()
+            print(f"[DEBUG] Found {urls} listings")
+            for url in urls:
                 self.logger.info(f"Scraping listing from URL: {url}")
                 listing = await self.scrape_listing(url)
                 if listing:
