@@ -20,6 +20,9 @@ class JobTemplate(Base):
     min_bathrooms = Column(Float, nullable=True)
     target_price_bedroom = Column(Integer, nullable=True)
     criteria = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    zipcode = Column(String, nullable=True)
+    search_distance_miles = Column(Float, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class Job(Base):
@@ -33,8 +36,8 @@ class Job(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     listing_scores = Column(JSON, default=dict)  # Store as {listing_id: {"score": float, "trace": str}}
     
-    template = relationship("JobTemplate")
-    user = relationship("User")
+    template = relationship("JobTemplate", lazy="joined")
+    user = relationship("User", lazy="selectin")
 
 class Listing(Base):
     __tablename__ = 'listings'

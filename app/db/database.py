@@ -113,7 +113,8 @@ async def create_job_template(user_id: UUID, job_input: dict) -> JobTemplate:
     async with get_async_db() as session:
         template_data = {
             k: v for k, v in job_input.items() 
-            if k in ['min_bedrooms', 'min_square_feet', 'min_bathrooms', 'target_price_bedroom', 'criteria']
+            if k in ['min_bedrooms', 'min_square_feet', 'min_bathrooms', 'target_price_bedroom', 'criteria',
+                    'location', 'zipcode', 'search_distance_miles']
         }
         template = JobTemplate(
             user_id=user_id,
@@ -197,7 +198,6 @@ async def update_job_listing_score(job_id: UUID, listing_id: UUID, score: float,
         
         await session.commit()
         return job
-
 async def get_pending_jobs() -> List[Job]:
     """Get jobs that haven't been updated in 24 hours"""
     async with get_async_db() as session:
@@ -206,3 +206,9 @@ async def get_pending_jobs() -> List[Job]:
             select(Job).where(Job.updated_at <= one_day_ago)
         )
         return result.scalars().all()
+
+async def get_listing_by_id(listing_id: UUID) -> Optional[Listing]:
+    """Get a listing by its ID with its own session scope."""
+    async with get_async_db() as session:
+        return await session.get(Listing, listing_id)
+

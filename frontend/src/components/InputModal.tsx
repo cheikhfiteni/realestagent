@@ -13,21 +13,14 @@ interface JobInput {
   min_bathrooms: number;
   target_price_bedroom: number;
   criteria?: string;
+  location?: string;
+  zipcode?: string;
+  search_distance_miles?: number;
 }
-
-// const isValidJobInput = (data: any): data is JobInput => {
-//   return (
-//     typeof data.name === 'string' &&
-//     typeof data.min_bedrooms === 'number' &&
-//     typeof data.min_square_feet === 'number' &&
-//     typeof data.min_bathrooms === 'number' &&
-//     typeof data.target_price_bedroom === 'number' &&
-//     (data.criteria === undefined || typeof data.criteria === 'string')
-//   );
-// };
 
 function InputModal({ onClose, onSuccess }: InputModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const [locations, setLocations] = useState<string[]>([]);
   const [formData, setFormData] = useState<JobInput>({
     name: '',
     min_bedrooms: 4,
@@ -35,7 +28,27 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
     min_bathrooms: 2.0,
     target_price_bedroom: 2000,
     criteria: '',
+    location: '',
+    zipcode: '',
+    search_distance_miles: 10,
   });
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/craiglist/hostnames`, {
+          credentials: 'include',
+        });
+        if (!response.ok) throw new Error('Failed to fetch locations');
+        const data = await response.json();
+        setLocations(data);
+      } catch (error) {
+        console.error('Error fetching locations:', error);
+      }
+    };
+
+    fetchLocations();
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -50,6 +63,13 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate required fields
+    if (!formData.name || !formData.location) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/jobs/add`, {
         method: 'POST',
@@ -67,11 +87,11 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: ['min_bedrooms', 'min_square_feet', 'min_bathrooms', 'target_price_bedroom'].includes(name)
+      [name]: ['min_bedrooms', 'min_square_feet', 'min_bathrooms', 'target_price_bedroom', 'search_distance_miles'].includes(name)
         ? Number(value)
         : value,
     }));
@@ -85,7 +105,7 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Job Name
+              Job Name <span className="text-red-500">*</span>
               <input
                 type="text"
                 name="name"
@@ -93,6 +113,56 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 required
+              />
+            </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Location <span className="text-red-500">*</span>
+              <select
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
+              >
+                <option value="">Select a location</option>
+                {locations.map((location) => (
+                  <option key={location} value={location}>
+                    {location}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Zipcode (Optional)
+              <input
+                type="text"
+                name="zipcode"
+                value={formData.zipcode}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                pattern="[0-9]{5}"
+                title="Five digit zip code"
+              />
+            </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Search Distance (miles)
+              <input
+                type="number"
+                name="search_distance_miles"
+                value={formData.search_distance_miles}
+                onChange={handleChange}
+                min="1"
+                max="100"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               />
             </label>
           </div>

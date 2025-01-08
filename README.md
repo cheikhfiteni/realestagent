@@ -45,6 +45,24 @@ scraper as an independent service).
 Run backend through `docker compose up --build`
 Run the frontend from the sub-repository using `pnpm dev`
 
+## Migrations
+
+Use the makefile to generate and apply. Use migrate-init if first time managing migration in dev environment
+
+TODO: Put intial alembic stamp in a fly.io intialization script. Something like:
+
+```
+# Check if alembic_version table exists
+if ! psql $DATABASE_URL -c "SELECT 1 FROM alembic_version LIMIT 1" >/dev/null 2>&1; then
+    # First time setup - stamp and upgrade
+    alembic -c app/alembic.ini stamp head
+fi
+
+# Always run upgrade after
+alembic -c app/alembic.ini upgrade head
+```
+
+
 ## Roadmap
 
 In no particular order:

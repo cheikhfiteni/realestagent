@@ -18,6 +18,7 @@ from uuid import UUID
 from functools import wraps
 
 from app.config import FRONTEND_URL
+import httpx
 
 class JobInput(BaseModel):
     name: str
@@ -26,6 +27,9 @@ class JobInput(BaseModel):
     min_bathrooms: Optional[float] = 2.0
     target_price_bedroom: Optional[int] = 2000
     criteria: Optional[str] = None
+    location: Optional[str] = None
+    zipcode: Optional[str] = None
+    search_distance_miles: Optional[float] = 10.0
 
 class JobStubOutput(BaseModel):
     id: UUID
@@ -174,3 +178,10 @@ async def get_changelog():
             "description": "Refreshed the user interface with a modern design. Added dark mode support."
         }
     ]
+
+@app.get("/craiglist/hostnames")
+async def get_craiglist_hostnames():
+    async with httpx.AsyncClient() as client:
+        response = await client.get("https://reference.craigslist.org/Areas")
+        data = response.json()
+        return [area["Hostname"] for area in data]
