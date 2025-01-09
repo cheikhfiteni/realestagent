@@ -1,4 +1,5 @@
 # Basic structure for app/main.py
+from asyncio import Lock
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -90,21 +91,14 @@ def scheduled_task(interval_minutes: int):
         return wrapper
     return decorator
 
-global _job_is_running
-_job_is_running = False
+_job_lock = Lock()
 
 @scheduled_task(interval_minutes=1)
 async def run_scheduled_jobs_async():
-    global _job_is_running
-    if _job_is_running:
-        return
-    
-    try:
-        if (pending_job := await get_next_pending_job()):
-            _job_is_running = True
-            await run_single_job(pending_job.id)
-    finally:
-        _job_is_running = False
+    if not _job_lock.locked():
+        async with _job_lock:
+            if (pending_job := await get_next_pending_job()):
+                await run_single_job(pending_job.id)
         
 # API Endpoints
 
