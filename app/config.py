@@ -17,6 +17,8 @@ print(f"\033[35mThe database_url is at {DATABASE_URL}\033[0m")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 SELENIUM_HOST = os.getenv("SELENIUM_HOST", "http://selenium")
 
+NO_IMAGE_URL = 'https://i.kym-cdn.com/entries/icons/original/000/049/021/duck_smoking_gif.jpg'
+
 class QueryConfig(BaseModel):
     """Configuration for housing search query parameters. All fields are optional."""
     min_bedrooms: int | None = 4

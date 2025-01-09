@@ -14,8 +14,8 @@ BATCH_SIZE = 5
 SLEEP_TIME = 0.2
 
 async def batch_database_save(upsert_listings: List[Listing], job_id: UUID) -> List[Listing]:
-    save_new_listings_to_db(upsert_listings)
-    for listing in upsert_listings:
+    saved_listings = await save_new_listings_to_db(upsert_listings)
+    for listing in saved_listings:
         await update_job_listing_score(job_id, listing.id, 0, "")
     return []
 

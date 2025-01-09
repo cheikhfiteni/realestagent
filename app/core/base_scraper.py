@@ -2,7 +2,9 @@ from abc import ABC, abstractmethod
 from typing import AsyncGenerator, List, Optional
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import TimeoutException, WebDriverException
 from contextlib import contextmanager
+import time
 
 from uuid import UUID
 from app.models.models import Listing, JobTemplate
@@ -20,44 +22,50 @@ class DriverManager:
         return cls._instance
 
     def get_driver(self):
-        try:
-            
-            # check if the driver is expired
-            if self._driver:
-                try:
-                    self._driver.current_url
-                    return self._driver
-                except Exception:
-                    self.logger.info("Selenium session expired, recreating driver")
-                    self.quit_driver()
-            
-            # Create new driver if none exists or previous one failed
-            chrome_options = Options()
-            chrome_options.add_argument('--headless=new')
-            chrome_options.add_argument('--no-sandbox')
-            chrome_options.add_argument('--disable-dev-shm-usage')
-            chrome_options.binary_location = "/usr/bin/chromium"
-            chrome_options.add_argument('--disable-gpu')
-            
-            chrome_options.add_argument('--enable-logging')
-            chrome_options.add_argument('--v=1')
-            chrome_options.add_argument('--remote-debugging-port=9222')
-            chrome_options.add_argument('--remote-debugging-address=0.0.0.0')
-            chrome_options.add_argument('--enable-crash-reporter')
+        max_retries = 3
+        retry_delay = 2  # seconds
+        timeout = 10  # seconds
+        start_time = time.time()
 
-            selenium_url = f'{SELENIUM_HOST}:4444/wd/hub'
-            print(f"\033[35mConnecting to Selenium at: {selenium_url}\033[0m")
+        while time.time() - start_time < timeout:
+            try:
+                # check if the driver is expired
+                if self._driver:
+                    try:
+                        self._driver.current_url
+                        return self._driver
+                    except Exception:
+                        self.logger.info("Selenium session expired, recreating driver")
+                        self.quit_driver()
+                
+                # Create new driver if none exists or previous one failed
+                chrome_options = Options()
+                chrome_options.add_argument('--headless=new')
+                chrome_options.add_argument('--no-sandbox')
+                chrome_options.add_argument('--disable-dev-shm-usage')
+                chrome_options.add_argument('--disable-gpu')
+                
+                chrome_options.add_argument('--enable-logging')
+                chrome_options.add_argument('--v=1')
 
-            self._driver = webdriver.Remote(
-                command_executor=selenium_url,
-                options=chrome_options
-            )     
-            return self._driver
+                selenium_url = f'{SELENIUM_HOST}:4444/wd/hub'
+                print(f"\033[35mConnecting to Selenium at: {selenium_url}\033[0m")
 
-        except Exception as e:
-            print(f"Failed to create driver: {e}")
-            self.quit_driver()  # Cleanup on failure
-            raise
+                self._driver = webdriver.Remote(
+                    command_executor=selenium_url,
+                    options=chrome_options
+                )     
+                return self._driver
+
+            except Exception as e:
+                print(f"Failed to create driver (attempt {max_retries}): {e}")
+                self.quit_driver()  # Cleanup on failure
+                if time.time() - start_time >= timeout:
+                    raise TimeoutError(f"Failed to connect to Selenium after {timeout} seconds")
+                time.sleep(retry_delay)
+                continue
+
+        raise TimeoutError(f"Failed to connect to Selenium after {timeout} seconds")
 
     def quit_driver(self):
         if self._driver:
@@ -143,7 +151,12 @@ class BaseScraper(ABC):
         """Main scraping workflow"""
         try:
             search_url = self.get_search_url()
-            self.driver.get(search_url)
+            try:
+                self.driver.get(search_url)
+            except (TimeoutException, WebDriverException) as e:
+                self.logger.error(f"Failed to connect to Selenium or load page: {str(e)}")
+                self._driver_manager.quit_driver()
+                raise
             
             for listing_url in self.get_listing_urls(search_url):
                 try:

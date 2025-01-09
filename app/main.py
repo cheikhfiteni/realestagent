@@ -153,7 +153,13 @@ async def add_job(job_input: JobInput, current_user: User = Depends(get_current_
         
         return {"status": "created", "job_id": job.id}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"\033[91mError creating job: {str(e)}\033[0m")  # Red color for error logging
+        if isinstance(e, ValueError):
+            raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create job: {str(e)}"
+        )
 
 @app.get("/db-health")
 async def database_health_check():

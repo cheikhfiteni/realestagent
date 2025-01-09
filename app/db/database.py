@@ -1,7 +1,7 @@
 import hashlib
 from app.models.models import engine, Listing, Job, JobTemplate, JobListingScore
 from sqlalchemy.orm import sessionmaker, Session
-from app.config import DATABASE_URL
+from app.config import DATABASE_URL, NO_IMAGE_URL
 from sqlalchemy import create_engine, select, func
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from contextlib import contextmanager, asynccontextmanager
@@ -54,8 +54,9 @@ def get_stored_listing_hashes():
         session.close()
     
 
-def save_new_listings_to_db(listings: list[Listing]):
-    with get_db_session() as session:
+async def save_new_listings_to_db(listings: list[Listing]) -> list[Listing]:
+    saved_listings = []
+    async with get_async_db() as session:
         columns = [
             'hash', 'title', 'bedrooms', 'bathrooms', 'square_footage',
             'post_id', 'description', 'price', 'location', 'neighborhood',
@@ -63,7 +64,10 @@ def save_new_listings_to_db(listings: list[Listing]):
         ]
 
         for listing in listings:
-            existing = session.query(Listing).filter_by(hash=listing.hash).first()
+            result = await session.execute(
+                select(Listing).where(Listing.hash == listing.hash)
+            )
+            existing = result.scalar_one_or_none()
 
             if not existing:
                 listing_data = {
@@ -72,14 +76,16 @@ def save_new_listings_to_db(listings: list[Listing]):
                 }
                 
                 new_listing = Listing(
-                    **listing_data,
-                    score=0,
-                    trace=""
+                    **listing_data
                 )
                 session.add(new_listing)
-                session.commit()
+                await session.commit()
+                await session.refresh(new_listing)
+                saved_listings.append(new_listing)
+            else:
+                saved_listings.append(existing)
     
-    session.close()
+    return saved_listings
 
 def get_unevaluated_listings() -> tuple[Session, list[Listing]]:
     """Get listings that haven't been evaluated yet."""
@@ -132,7 +138,6 @@ async def create_job(user_id: UUID, template_id: UUID, name: str) -> Job:
             user_id=user_id,
             template_id=template_id,
             name=name,
-            listing_scores={},
             created_at=now, 
             updated_at=now
         )
@@ -174,7 +179,7 @@ async def get_job_with_listings(job_id: UUID, user_id: UUID) -> Optional[Dict]:
             formatted_listings.append({
                 "id": listing.id,
                 "title": listing.title,
-                "cover_image_url": image_urls[0] if image_urls else None,
+                "cover_image_url": image_urls[0] if image_urls else NO_IMAGE_URL,
                 "location": listing.location,
                 "cost": listing.price,
                 "bedrooms": listing.bedrooms,
