@@ -3,7 +3,7 @@ from asyncio import Lock
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from app.logic import run_job as run_single_job
+from app.logic import run_job as run_single_job, test_just_evaluation
 from app.services.authentication import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, router as auth_router, get_current_user
 from pydantic import BaseModel
 from typing import Dict, Optional, List
@@ -11,7 +11,7 @@ from datetime import datetime
 from sqlalchemy import text
 from app.db.database import (
     engine, get_next_pending_job, get_user_jobs, get_job_with_listings, 
-    create_job_template, create_job, get_pending_jobs
+    create_job_template, create_job
 )
 from app.models.models import User
 from starlette.middleware.sessions import SessionMiddleware
@@ -93,13 +93,24 @@ def scheduled_task(interval_minutes: int):
 
 _job_lock = Lock()
 
-@scheduled_task(interval_minutes=1)
+@scheduled_task(interval_minutes=60*24)
 async def run_scheduled_jobs_async():
     if not _job_lock.locked():
         async with _job_lock:
             if (pending_job := await get_next_pending_job()):
                 await run_single_job(pending_job.id)
-        
+
+@app.get("/test-evaluation")
+async def run_test_evaluation():
+    """Run evaluation for test job repeatedly"""
+    test_job_id = UUID('031cbf19-3254-46e0-9d61-9b37e14255a5')
+    try:
+        await test_just_evaluation(test_job_id)
+        return {"status": "success"}
+    except Exception as e:
+        print(f"Error running test evaluation: {str(e)}")
+        return {"status": "error", "message": str(e)}
+
 # API Endpoints
 
 @app.get("/")

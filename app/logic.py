@@ -1,8 +1,10 @@
+from typing import List
+from uuid import UUID
 from app.core.evaluator import evaluate_listing_aesthetics, evaluate_listing_hueristics
-from app.models.models import Listing, Job
+from app.models.models import Listing, Job, JobListingScore
 from app.db.database import (
     get_async_db, get_stored_listing_hashes, save_new_listings_to_db,
-    update_job_listing_score, get_listing_by_id
+    update_job_listing_score, get_listing_by_id, get_job_listing_scores
 )
 
 from app.core.base_scraper import ScrapingConfig
@@ -11,7 +13,7 @@ from app.core.craiglist_scraper import CraigslistScraper
 BATCH_SIZE = 5
 SLEEP_TIME = 0.2
 
-async def batch_database_save(upsert_listings, job_id):
+async def batch_database_save(upsert_listings: List[Listing], job_id: UUID) -> List[Listing]:
     save_new_listings_to_db(upsert_listings)
     for listing in upsert_listings:
         await update_job_listing_score(job_id, listing.id, 0, "")
@@ -43,12 +45,15 @@ async def scrape_listings(job: Job):
 
 async def evaluate_job_listings(job: Job):
     """Evaluate listings for a specific job using its template criteria."""
-    listing_scores = job.listing_scores or {}
+    listing_scores = await get_job_listing_scores(job.id)
     
-    for listing_id, score_data in listing_scores.items():
-        if score_data.get("score", 0) == 0:
+    print(f"\033[33mEvaluating listings for job: {job.name}")
+    print(f"Found {len(listing_scores)} listings to evaluate\033[0m")
+    
+    for score in listing_scores:
+        if score.score == 0:
             try:
-                listing = await get_listing_by_id(listing_id)
+                listing = await get_listing_by_id(score.listing_id)
                 if not listing:
                     continue
 
@@ -57,13 +62,13 @@ async def evaluate_job_listings(job: Job):
                 total_score = hueristic_score + aesthetic_score
                 total_trace = f"{hueristic_trace} | {aesthetic_trace}"
                 
-                await update_job_listing_score(job.id, int(listing_id), total_score, total_trace)
+                await update_job_listing_score(job.id, listing.id, total_score, total_trace)
                 
             except Exception as e:
-                print(f"Error evaluating listing {listing_id}: {str(e)}")
+                print(f"Error evaluating listing {score.listing_id}: {str(e)}")
                 continue
 
-async def run_job(job_id: int):
+async def run_job(job_id: UUID):
     """Run a complete job cycle - scraping and evaluation."""
     async with get_async_db() as session:
         job = await session.get(Job, job_id)
@@ -74,6 +79,13 @@ async def run_job(job_id: int):
         print(f"Running evaluate job listings for job {job_id}")
         await evaluate_job_listings(job)
 
+async def test_just_evaluation(job_id: UUID):
+    async with get_async_db() as session:
+        job = await session.get(Job, job_id)
+        if not job:
+            raise ValueError(f"Job {job_id} not found")
+        await evaluate_job_listings(job)
+
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(run_job(1))  # For testing
+    asyncio.run(run_job(UUID('031cbf19-3254-46e0-9d61-9b37e14255a5')))

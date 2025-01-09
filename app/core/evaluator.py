@@ -156,7 +156,7 @@ def _evaluate_with_claude(listing: Listing, criteria: str) -> tuple[int, str]:
 
 def evaluate_listing_aesthetics(listing: Listing) -> tuple[int, str]:
     """Evaluate listing aesthetics using configured model."""
-
+    print(f"\033[31mEvaluating aesthetics for {listing.title}\033[0m")
     if CLAUDE_MODEL and USE_CLAUDE:
         return _evaluate_with_claude(listing, CRITERIA)
     elif GPT_MODEL:
@@ -170,7 +170,7 @@ def evaluate_listing_hueristics(listing: Listing) -> tuple[int, str]:
     """Evaluate a single listing and return score and trace."""
     score = 0
     trace = []
-    
+    print(f"\033[31mEvaluating heursitics for {listing.title}\033[0m")
     # Price evaluation
     if QUERY_CONFIG.target_price_bedroom:
         if listing.price < QUERY_CONFIG.target_price_bedroom:

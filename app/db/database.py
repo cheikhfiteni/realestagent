@@ -1,5 +1,5 @@
 import hashlib
-from app.models.models import engine, Listing, Job, JobTemplate, User
+from app.models.models import engine, Listing, Job, JobTemplate, JobListingScore
 from sqlalchemy.orm import sessionmaker, Session
 from app.config import DATABASE_URL
 from sqlalchemy import create_engine, select, func
@@ -149,26 +149,27 @@ async def get_user_jobs(user_id: UUID) -> List[Job]:
         return result.scalars().all()
 
 async def get_job_with_listings(job_id: UUID, user_id: UUID) -> Optional[Dict]:
+    """Get a job's listings with their scores."""
     async with get_async_db() as session:
         # Get job and verify user
         job = await session.get(Job, job_id)
         if not job or job.user_id != user_id:
             return None
             
-        # Get all listings referenced in job
-        listing_ids = list(job.listing_scores.keys())
-        if not listing_ids:
+        # Get all listings with scores in a single query
+        result = await session.execute(
+            select(Listing, JobListingScore)
+            .join(JobListingScore, JobListingScore.listing_id == Listing.id)
+            .where(JobListingScore.job_id == job_id)
+        )
+        listing_scores = result.all()
+        
+        if not listing_scores:
             return []
             
-        result = await session.execute(
-            select(Listing).where(Listing.id.in_(listing_ids))
-        )
-        listings = result.scalars().all()
-        
         # Format response
         formatted_listings = []
-        for listing in listings:
-            score_data = job.listing_scores.get(str(listing.id), {})
+        for listing, score in listing_scores:
             image_urls = json.loads(listing.image_urls) if listing.image_urls else []
             formatted_listings.append({
                 "id": listing.id,
@@ -179,25 +180,33 @@ async def get_job_with_listings(job_id: UUID, user_id: UUID) -> Optional[Dict]:
                 "bedrooms": listing.bedrooms,
                 "bathrooms": listing.bathrooms,
                 "square_footage": listing.square_footage,
-                "score": score_data.get("score", 0),
-                "trace": score_data.get("trace", "")
+                "score": score.score,
+                "trace": score.trace
             })
         
         return formatted_listings
 
 async def update_job_listing_score(job_id: UUID, listing_id: UUID, score: float, trace: str):
+    """Update or create a score for a specific listing in a job."""
     async with get_async_db() as session:
-        job = await session.get(Job, job_id)
-        if not job:
-            return None
-            
-        scores = job.listing_scores or {}
-        scores[str(listing_id)] = {"score": score, "trace": trace}
-        job.listing_scores = scores
-        job.updated_at = datetime.now()
+        # Get or create job listing score
+        score_obj = await session.get(JobListingScore, {'job_id': job_id, 'listing_id': listing_id})
+        if not score_obj:
+            score_obj = JobListingScore(
+                job_id=job_id,
+                listing_id=listing_id,
+                score=score,
+                trace=trace
+            )
+            session.add(score_obj)
+        else:
+            score_obj.score = score
+            score_obj.trace = trace
+            score_obj.updated_at = datetime.now()
         
         await session.commit()
-        return job
+        return score_obj
+
 async def get_pending_jobs() -> List[Job]:
     """Get jobs that haven't been updated in 24 hours"""
     async with get_async_db() as session:
@@ -217,7 +226,16 @@ async def get_next_pending_job() -> Optional[Job]:
         return result.scalars().first()
 
 async def get_listing_by_id(listing_id: UUID) -> Optional[Listing]:
-    """Get a listing by its ID with its own session scope."""
+    """Get a listing by its UUID."""
     async with get_async_db() as session:
-        return await session.get(Listing, listing_id)
+        result = await session.get(Listing, listing_id)
+        return result
+
+async def get_job_listing_scores(job_id: UUID) -> List[JobListingScore]:
+    """Get all listing scores for a specific job."""
+    async with get_async_db() as session:
+        result = await session.execute(
+            select(JobListingScore).where(JobListingScore.job_id == job_id)
+        )
+        return result.scalars().all()
 

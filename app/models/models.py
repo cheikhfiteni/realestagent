@@ -25,6 +25,18 @@ class JobTemplate(Base):
     search_distance_miles = Column(Float, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+class JobListingScore(Base):
+    __tablename__ = 'job_listing_scores'
+    
+    job_id = Column(UUID(as_uuid=True), ForeignKey('jobs.id'), primary_key=True)
+    listing_id = Column(UUID(as_uuid=True), ForeignKey('listings.id'), primary_key=True)
+    score = Column(Float, nullable=False, default=0)
+    trace = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    job = relationship("Job", back_populates="listing_scores")
+
 class Job(Base):
     __tablename__ = 'jobs'
     
@@ -34,10 +46,10 @@ class Job(Base):
     name = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    listing_scores = Column(JSON, default=dict)  # Store as {listing_id: {"score": float, "trace": str}}
     
     template = relationship("JobTemplate", lazy="joined")
     user = relationship("User", lazy="selectin")
+    listing_scores = relationship("JobListingScore", back_populates="job", cascade="all, delete-orphan")
 
 class Listing(Base):
     __tablename__ = 'listings'
@@ -57,11 +69,9 @@ class Listing(Base):
     link = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    score = Column(Integer, nullable=True, default=None)
-    trace = Column(String, nullable=True, default=None)
 
     def __repr__(self):
-        return f"<Listing(title='{self.title}', price=${self.price}, {self.bedrooms}BR/{self.bathrooms}BA, score={self.score}, location='{self.location}', neighborhood='{self.neighborhood}')>"
+        return f"<Listing(title='{self.title}', price=${self.price}, {self.bedrooms}BR/{self.bathrooms}BA, location='{self.location}', neighborhood='{self.neighborhood}')>"
     
 class VerificationCode(Base):
     __tablename__ = "verification_codes"

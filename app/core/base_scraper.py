@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator, Generator, List, Optional
+from typing import AsyncGenerator, List, Optional
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from contextlib import contextmanager
@@ -8,7 +8,6 @@ from uuid import UUID
 from app.models.models import Listing, JobTemplate
 from app.config import SELENIUM_HOST
 import logging
-import os
 
 class DriverManager:
     _instance = None
@@ -21,7 +20,18 @@ class DriverManager:
         return cls._instance
 
     def get_driver(self):
-        if self._driver is None:
+        try:
+            
+            # check if the driver is expired
+            if self._driver:
+                try:
+                    self._driver.current_url
+                    return self._driver
+                except Exception:
+                    self.logger.info("Selenium session expired, recreating driver")
+                    self.quit_driver()
+            
+            # Create new driver if none exists or previous one failed
             chrome_options = Options()
             chrome_options.add_argument('--headless=new')
             chrome_options.add_argument('--no-sandbox')
@@ -42,12 +52,20 @@ class DriverManager:
                 command_executor=selenium_url,
                 options=chrome_options
             )     
-        return self._driver
+            return self._driver
+
+        except Exception as e:
+            print(f"Failed to create driver: {e}")
+            self.quit_driver()  # Cleanup on failure
+            raise
 
     def quit_driver(self):
         if self._driver:
             self._driver.quit()
             self._driver = None
+
+    def __del__(self):
+        self.quit_driver()
 
 class ScrapingConfig:
     """Configuration class for scraper parameters"""

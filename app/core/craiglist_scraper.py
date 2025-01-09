@@ -10,13 +10,15 @@ import asyncio
 from typing import AsyncGenerator, List, Optional
 from app.models.models import Listing
 from app.core.base_scraper import BaseScraper, ScrapingConfig
-from app.db.database import _listing_hash
+from app.db.database import _listing_hash, get_stored_listing_hashes
 
 class CraigslistScraper(BaseScraper):
     def __init__(self, config: ScrapingConfig):
         super().__init__(config)
         self.base_url = "https://craigslist.org/search/apa"
         self.sleep_time = 0.2
+        self.existing_hashes = set()
+
     def __enter__(self):
         print(f"[DEBUG] Entering CraigslistScraper context manager for job {self.config.job_id}")
         return self
@@ -263,21 +265,36 @@ class CraigslistScraper(BaseScraper):
             return False
         return True
 
+    async def load_existing_hashes(self):
+        """Load existing listing hashes from database"""
+        self.existing_hashes = get_stored_listing_hashes()
+        print(f"[DEBUG] Loaded {len(self.existing_hashes)} existing listing hashes")
+
     async def scrape(self) -> AsyncGenerator[Listing, None]:
         """Main scraping method that yields valid listings."""
         print(f"[DEBUG] In the craiglist scraping loop for the task {self.config.template_id}")
         try:
             self.logger.info("Starting scraping process")
+            # Load existing hashes before starting
+            await self.load_existing_hashes()
             urls = await self.get_listing_urls()
-            print(f"[DEBUG] Found {urls} listings")
+            print(f"[DEBUG] Found {len(urls)} listings")
             for url in urls:
+                # Check if listing already exists before scraping
+                post_id = url.split("/")[-1].split(".")[0]
+                listing_hash = _listing_hash(post_id)
+                
+                if listing_hash in self.existing_hashes:
+                    self.logger.info(f"Skipping existing listing: {url}")
+                    continue
+
+                self.existing_hashes.add(listing_hash)
                 self.logger.info(f"Scraping listing from URL: {url}")
                 listing = await self.scrape_listing(url)
                 if listing:
                     self.logger.info(f"Successfully scraped listing: {listing.title}")
                     if self.validate_listing(listing):
                         self.logger.info(f"Listing passed validation: {listing.title}")
-                        # Create the listing object without any database operations
                         yield listing
                     else:
                         self.logger.info(f"Listing failed validation: {listing.title}")
