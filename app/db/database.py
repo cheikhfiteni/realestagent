@@ -206,6 +206,15 @@ async def get_pending_jobs() -> List[Job]:
             select(Job).where(Job.updated_at <= one_day_ago)
         )
         return result.scalars().all()
+    
+async def get_next_pending_job() -> Optional[Job]:
+    """Get the oldest job that hasn't been updated in 24 hours"""
+    async with get_async_db() as session:
+        one_day_ago = datetime.now() - timedelta(days=1)
+        result = await session.execute(
+            select(Job).where(Job.updated_at <= one_day_ago).order_by(Job.updated_at).limit(1)
+        )
+        return result.scalars().first()
 
 async def get_listing_by_id(listing_id: UUID) -> Optional[Listing]:
     """Get a listing by its ID with its own session scope."""

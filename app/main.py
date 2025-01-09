@@ -2,14 +2,14 @@
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from app.logic import run_job as run_job_logic
+from app.logic import run_job as run_single_job
 from app.services.authentication import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, router as auth_router, get_current_user
 from pydantic import BaseModel
 from typing import Dict, Optional, List
 from datetime import datetime
 from sqlalchemy import text
 from app.db.database import (
-    engine, get_user_jobs, get_job_with_listings, 
+    engine, get_next_pending_job, get_user_jobs, get_job_with_listings, 
     create_job_template, create_job, get_pending_jobs
 )
 from app.models.models import User
@@ -79,13 +79,6 @@ async def startup_event():
 async def shutdown_event():
     scheduler.shutdown()
 
-async def run_single_job(job_id: UUID):
-    try:
-        # Run the job using template config
-        await run_job_logic(job_id)
-    except Exception as e:
-        print(f"Error running job {job_id}: {str(e)}")
-
 def scheduled_task(interval_minutes: int):
     def decorator(func):
         @wraps(func)
@@ -97,12 +90,22 @@ def scheduled_task(interval_minutes: int):
         return wrapper
     return decorator
 
+global _job_is_running
+_job_is_running = False
+
 @scheduled_task(interval_minutes=1)
 async def run_scheduled_jobs_async():
-    pending_jobs = await get_pending_jobs()
-    for job in pending_jobs:
-        await run_single_job(job.id)
-
+    global _job_is_running
+    if _job_is_running:
+        return
+    
+    try:
+        if (pending_job := await get_next_pending_job()):
+            _job_is_running = True
+            await run_single_job(pending_job.id)
+    finally:
+        _job_is_running = False
+        
 # API Endpoints
 
 @app.get("/")
