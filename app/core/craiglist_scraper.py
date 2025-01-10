@@ -9,7 +9,7 @@ import re
 import asyncio
 from typing import AsyncGenerator, List, Optional
 from app.models.models import Listing
-from app.core.base_scraper import BaseScraper, ScrapingConfig
+from app.core.base_scraper import BaseScraper, ScrapingConfig, ScrapeOutput
 from app.db.database import _listing_hash, get_stored_listing_hashes
 
 class CraigslistScraper(BaseScraper):
@@ -270,8 +270,8 @@ class CraigslistScraper(BaseScraper):
         self.existing_hashes = get_stored_listing_hashes()
         print(f"[DEBUG] Loaded {len(self.existing_hashes)} existing listing hashes")
 
-    async def scrape(self) -> AsyncGenerator[Listing, None]:
-        """Main scraping method that yields valid listings."""
+    async def scrape(self) -> AsyncGenerator[ScrapeOutput, None]:
+        """Main scraping method that yields either new listings or existing listing hashes."""
         print(f"[DEBUG] In the craiglist scraping loop for the task {self.config.template_id}")
         try:
             self.logger.info("Starting scraping process")
@@ -285,7 +285,8 @@ class CraigslistScraper(BaseScraper):
                 listing_hash = _listing_hash(post_id)
                 
                 if listing_hash in self.existing_hashes:
-                    self.logger.info(f"Skipping existing listing: {url}")
+                    self.logger.info(f"Found existing listing: {url}")
+                    yield listing_hash
                     continue
 
                 self.existing_hashes.add(listing_hash)

@@ -9,6 +9,7 @@ from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 import json
 from uuid import UUID
+from sqlalchemy import and_
 
 # Sync SQLAlchemy engine for migrations and model creation
 engine = create_engine(DATABASE_URL, echo=True)
@@ -241,6 +242,28 @@ async def get_job_listing_scores(job_id: UUID) -> List[JobListingScore]:
     async with get_async_db() as session:
         result = await session.execute(
             select(JobListingScore).where(JobListingScore.job_id == job_id)
+        )
+        return result.scalars().all()
+
+async def get_listing_id_by_hash(listing_hashes: List[str]) -> List[UUID]:
+    """Get listing IDs by their hashes."""
+    async with get_async_db() as session:
+        result = await session.execute(
+            select(Listing.id).where(Listing.hash.in_(listing_hashes))
+        )
+        return result.scalars().all()
+        
+
+async def filter_listing_ids_on_job(job_id: UUID, listing_ids: List[UUID]) -> List[UUID]:
+    """Get listing IDs that already have a relationship with the given job."""
+    async with get_async_db() as session:
+        result = await session.execute(
+            select(JobListingScore.listing_id).where(
+                and_(
+                    JobListingScore.job_id == job_id,
+                    JobListingScore.listing_id.in_(listing_ids)
+                )
+            )
         )
         return result.scalars().all()
 

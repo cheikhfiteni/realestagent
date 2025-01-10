@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator, List, Optional
+from typing import AsyncGenerator, List, Optional, Union
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, WebDriverException
@@ -11,6 +11,7 @@ from app.models.models import Listing, JobTemplate
 from app.config import SELENIUM_HOST
 import logging
 
+ScrapeOutput = Union[Listing, str]  # str represents listing_hash
 class DriverManager:
     _instance = None
     _driver = None
@@ -147,8 +148,8 @@ class BaseScraper(ABC):
         """Validate if a listing meets the minimum criteria"""
         pass
 
-    async def scrape(self) -> AsyncGenerator[Listing, None]:
-        """Main scraping workflow"""
+    async def scrape(self) -> AsyncGenerator[ScrapeOutput, None]:
+        """Main scraping workflow that yields either Listing objects or listing hashes"""
         try:
             search_url = self.get_search_url()
             try:

@@ -1,9 +1,9 @@
 from typing import List
 from uuid import UUID
 from app.core.evaluator import evaluate_listing_aesthetics, evaluate_listing_hueristics
-from app.models.models import Listing, Job, JobListingScore
+from app.models.models import Listing, Job
 from app.db.database import (
-    get_async_db, get_stored_listing_hashes, save_new_listings_to_db,
+    filter_listing_ids_on_job, get_async_db, get_listing_id_by_hash, get_stored_listing_hashes, save_new_listings_to_db,
     update_job_listing_score, get_listing_by_id, get_job_listing_scores
 )
 
@@ -19,6 +19,14 @@ async def batch_database_save(upsert_listings: List[Listing], job_id: UUID) -> L
         await update_job_listing_score(job_id, listing.id, 0, "")
     return []
 
+async def batch_memoized_score_update(job_id: UUID, listing_hashes: List[str]) -> None:
+    """Update job-listing relationships for existing listings."""
+    listing_ids = await get_listing_id_by_hash(listing_hashes)
+    existing_ids = await filter_listing_ids_on_job(job_id, listing_ids)
+    for li in listing_ids:
+        if li not in existing_ids:
+            await update_job_listing_score(job_id, listing_hashes)
+
 async def scrape_listings(job: Job):
     print(f"[DEBUG] Starting scrape_listings for job {job.id}")
     print(f"[DEBUG] Job template: {job.template}")
@@ -31,17 +39,25 @@ async def scrape_listings(job: Job):
     print(f"[DEBUG] Initializing CraigslistScraper for job {job.id}")
     with CraigslistScraper.create(config) as scraper:
         upsert_listings = []
+        listing_hashes = []
         print(f"[DEBUG] Starting scraping loop for job {job.id}")
-        async for listing in scraper.scrape():
-            if listing.hash not in stored_hashes:
-                upsert_listings.append(listing)
-                stored_hashes.add(listing.hash)
+        
+        async for scrape_output in scraper.scrape():
+            if isinstance(scrape_output, str):  # It's a hash
+                listing_hashes.append(scrape_output)
+            else:  # It's a new listing
+                if isinstance(scrape_output, Listing) and scrape_output.hash not in stored_hashes:
+                    upsert_listings.append(scrape_output)
+                    stored_hashes.add(scrape_output.hash)
                 
             if len(upsert_listings) >= BATCH_SIZE:
                 upsert_listings = await batch_database_save(upsert_listings, job.id)
                     
         if upsert_listings:
             upsert_listings = await batch_database_save(upsert_listings, job.id)
+            
+        if listing_hashes:
+            await batch_memoized_score_update(job.id, listing_hashes)
 
 async def evaluate_job_listings(job: Job):
     """Evaluate listings for a specific job using its template criteria."""
