@@ -10,8 +10,12 @@ services:
     shm_size: "6g"
     environment:
       - SE_NODE_MAX_SESSIONS=1
-      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_NODE_SESSION_TIMEOUT=120
       - SE_START_XVFB=true
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_DRAIN_AFTER_SESSION_COUNT=5
+      - SE_GRID_HEARTBEAT_PERIOD=2000
+      - SE_GRID_MAX_SESSION=1
       - GRID_DEBUG=false
       - SE_LOG_LEVEL=WARN
       - CHROME_DRIVER_VERSION=111.0.5563.146 
@@ -30,6 +34,17 @@ services:
       bash -c "chromium --version && 
       chromedriver --version && 
       /opt/bin/entry_point.sh"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1'
+        reservations:
+          memory: 1G
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
   db:
     image: postgres:14

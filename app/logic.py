@@ -25,7 +25,7 @@ async def batch_memoized_score_update(job_id: UUID, listing_hashes: List[str]) -
     existing_ids = await filter_listing_ids_on_job(job_id, listing_ids)
     for li in listing_ids:
         if li not in existing_ids:
-            await update_job_listing_score(job_id, listing_hashes)
+            await update_job_listing_score(job_id, li, 0, "")
 
 async def scrape_listings(job: Job):
     print(f"[DEBUG] Starting scrape_listings for job {job.id}")
