@@ -25,7 +25,7 @@ class DriverManager:
     def get_driver(self):
         max_retries = 3
         retry_delay = 2  # seconds
-        timeout = 10  # seconds
+        timeout = 15  # seconds
         start_time = time.time()
 
         while time.time() - start_time < timeout:
@@ -36,35 +36,46 @@ class DriverManager:
                         self._driver.current_url
                         return self._driver
                     except Exception:
-                        self.logger.info("Selenium session expired, recreating driver")
+                        print("Selenium session expired, recreating driver")
                         self.quit_driver()
                 
-                # Create new driver if none exists or previous one failed
                 chrome_options = Options()
                 chrome_options.add_argument('--headless=new')
                 chrome_options.add_argument('--no-sandbox')
                 chrome_options.add_argument('--disable-dev-shm-usage')
                 chrome_options.add_argument('--disable-gpu')
+                chrome_options.add_argument('--disable-extensions')
+                chrome_options.add_argument('--dns-prefetch-disable')
+                chrome_options.add_argument('--page-load-strategy=eager')
                 
-                chrome_options.add_argument('--enable-logging')
-                chrome_options.add_argument('--v=1')
+                # Set timeouts directly in capabilities
+                chrome_options.set_capability('timeouts', {
+                    'implicit': 10000,
+                    'pageLoad': 30000,
+                    'script': 30000
+                })
 
                 selenium_url = f'{SELENIUM_HOST}:4444/wd/hub'
-                print(f"\033[35mConnecting to Selenium at: {selenium_url}\033[0m")
+                print(f"Attempting to connect to Selenium at: {selenium_url}")
 
                 self._driver = webdriver.Remote(
                     command_executor=selenium_url,
-                    options=chrome_options
-                )     
+                    options=chrome_options,
+                    keep_alive=True
+                )
+                
+                # Set timeouts after connection
+                self._driver.set_page_load_timeout(30)
+                self._driver.implicitly_wait(10)
+                
                 return self._driver
 
             except Exception as e:
-                print(f"Failed to create driver (attempt {max_retries}): {e}")
-                self.quit_driver()  # Cleanup on failure
+                print(f"Failed to create driver: {str(e)}")
+                self.quit_driver()
                 if time.time() - start_time >= timeout:
                     raise TimeoutError(f"Failed to connect to Selenium after {timeout} seconds")
                 time.sleep(retry_delay)
-                continue
 
         raise TimeoutError(f"Failed to connect to Selenium after {timeout} seconds")
 
