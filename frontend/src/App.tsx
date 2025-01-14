@@ -1,17 +1,53 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Overview from './pages/Overview';
 import Changelog from './pages/Changelog';
 import Feed from './pages/Feed';
 import BackButton from './components/BackButton';
+import { Link } from 'react-router-dom';
 
-function App() {
+function Footer() {
+  const { logout, isAuthenticated } = useAuth();
+  const location = useLocation();
+  
+  // Don't render footer on welcome page
+  if (location.pathname === '/welcome') return null;
+  
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <BackButton />
+    <footer className="mt-auto py-6">
+      <div className="container mx-auto px-8">
+        <div className="flex justify-between items-center text-sm text-gray-500">
+          <div className="space-x-6">
+            <Link to="/overview" className="hover:text-gray-900">Overview</Link>
+            <Link to="/changelog" className="hover:text-gray-900">Changelog</Link>
+            <Link to="/welcome" className="hover:text-gray-900">About</Link>
+          </div>
+          {isAuthenticated && (
+            <button
+              onClick={logout}
+              className="hover:text-gray-900"
+            >
+              Logout
+            </button>
+          )}
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function AppContent() {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+  const showFooter = isAuthenticated && location.pathname !== '/welcome';
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <BackButton />
+      <main className="flex-grow flex flex-col">
         <Routes>
           <Route path="/welcome" element={<Home />} />
           <Route path="/" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
@@ -19,6 +55,17 @@ function App() {
           <Route path="/overview" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
           <Route path="/changelog" element={<Changelog />} />
         </Routes>
+      </main>
+      {showFooter && <Footer />}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppContent />
       </BrowserRouter>
     </AuthProvider>
   );

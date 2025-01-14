@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import json
 from uuid import UUID
 from sqlalchemy import and_
+from sqlalchemy.orm import selectinload
 
 # Sync SQLAlchemy engine for migrations and model creation
 engine = create_engine(DATABASE_URL, echo=True)
@@ -147,12 +148,24 @@ async def create_job(user_id: UUID, template_id: UUID, name: str) -> Job:
         await session.refresh(job)
         return job
 
-async def get_user_jobs(user_id: UUID) -> List[Job]:
+async def get_user_jobs(user_id: UUID):
+    # Subquery to count listings per job
+    listing_count = (
+        select(func.count(JobListingScore.listing_id))
+        .where(JobListingScore.job_id == Job.id)
+        .scalar_subquery()
+        .label('listing_count')
+    )
+
+    query = (
+        select(Job, listing_count)
+        .where(Job.user_id == user_id)
+        .order_by(Job.updated_at.desc())
+    )
+    
     async with get_async_db() as session:
-        result = await session.execute(
-            select(Job).where(Job.user_id == user_id)
-        )
-        return result.scalars().all()
+        result = await session.execute(query)
+        return result.all()
 
 async def get_job_with_listings(job_id: UUID, user_id: UUID) -> Optional[Dict]:
     """Get a job's listings with their scores."""
