@@ -5,6 +5,22 @@ import { toast } from 'react-hot-toast';
 import InputModal from '../components/InputModal';
 import { fetchJobs, invalidateJobsCache, type Job } from '../services/jobs';
 
+function getTimeAgo(date: string) {
+  const now = new Date();
+  const updated = new Date(date);
+  const diffMinutes = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60));
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} minutes ago`;
+  } else if (diffHours < 48) {
+    return `${diffHours} hours ago`;
+  } else {
+    return `${diffDays} days ago`;
+  }
+}
+
 function Overview() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,7 +56,7 @@ function Overview() {
         Overview of All Jobs
       </h1>
       
-      <div className="flex justify-end mb-6">
+      <div className="flex justify-end mb-6 px-8">
         <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
@@ -49,20 +65,21 @@ function Overview() {
         </button>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-6 max-w-[1920px] mx-auto px-8">
         {jobs.map((job) => (
           <div
             key={job.id}
             onClick={() => handleJobClick(job.id)}
-            className="flex items-center p-6 border rounded-lg cursor-pointer hover:bg-gray-50 transition-all w-full max-w-7xl mx-auto"
+            className="flex bg-white rounded-lg cursor-pointer hover:bg-gray-50 transition-all border border-dotted border-gray-300 shadow-md hover:shadow-lg p-5 overflow-hidden"
           >
-            <div className="flex items-center gap-12 w-full">
-              <div className="relative w-72 h-40 flex-shrink-0">
-                {/* Stacked effect images - back to front */}
-                <div className="absolute inset-0 -left-6 top-0 bg-gray-50 rounded-lg -z-20 transform rotate-1" />
-                <div className="absolute inset-0 -left-3 top-0 bg-gray-100 rounded-lg -z-10 transform rotate-0.5" />
-                {/* Main image - most offset to bottom-right */}
-                <div className="absolute inset-0 left-0 top-0 bg-gray-200 rounded-lg overflow-hidden transform rotate-0">
+            <div className="flex flex-col md:flex-row gap-12 w-full">
+              <div className="relative w-full md:w-72 h-36 flex-shrink-0">
+                {/* Back image */}
+                <div className="absolute inset-0 -left-6 -top-3 bg-gray-50 rounded-lg transform translate-x-6 translate-y-6 -z-20" />
+                {/* Middle image */}
+                <div className="absolute inset-0 -left-3 -top-1.5 bg-gray-100 rounded-lg transform translate-x-3 translate-y-3 -z-10" />
+                {/* Front image */}
+                <div className="absolute inset-0 bg-gray-200 rounded-lg overflow-hidden">
                   {job.cover_image_url ? (
                     <img
                       src={job.cover_image_url}
@@ -74,15 +91,20 @@ function Overview() {
                   )}
                 </div>
               </div>
-              <div className="flex flex-col gap-3 flex-grow">
-                <h3 className="text-2xl font-semibold">{job.name}</h3>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Cloud size={16} />
-                  <span>Last Updated: {new Date(job.last_updated).toLocaleString()}</span>
+              <div className="flex flex-col flex-grow justify-between">
+                <div className="flex justify-between items-start gap-24">
+                  <h3 className="text-2xl font-semibold">{job.name}</h3>
+                  <div className="flex items-center gap-2 text-gray-600 text-sm whitespace-nowrap">
+                    <Cloud size={16} />
+                    <span className="hidden sm:inline">Updated</span>
+                    <span>{getTimeAgo(job.last_updated)}</span>
+                  </div>
                 </div>
-                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full w-fit">
-                  {job.listing_count || 0} Listings
-                </span>
+                <div className="flex justify-end">
+                  <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                    {job.listing_count || 0} Listings
+                  </span>
+                </div>
               </div>
             </div>
           </div>
