@@ -10,6 +10,16 @@ function Home() {
   const [shouldAnimate, setShouldAnimate] = useState(true);
 
   useEffect(() => {
+    // Disable scrolling
+    document.body.style.overflow = 'hidden';
+    
+    // Re-enable scrolling on cleanup
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
+  useEffect(() => {
     const lastVisit = localStorage.getItem('lastHomeVisit');
     const now = Date.now();
     
@@ -24,8 +34,8 @@ function Home() {
 
   return (
     <div className={`flex-grow flex items-center justify-center ${shouldAnimate ? 'animate-fadeIn' : ''}`}>
-      <div className="max-w-4xl w-full">
-        <div className="space-y-8">
+      <div className="max-w-4xl w-full px-8">
+        <div className="space-y-6">
           <p className="text-gray-600 text-xl leading-relaxed indent-8">
             Housing is everything. On average, you'll spend 4,380 hours a year in your apartment which you'll live in for 365 days and invest 30% of your income for. You'll only spend 2-4 hours searching for it.
           </p>
@@ -41,7 +51,7 @@ function Home() {
           </div>
         </div>
 
-        <div className="mt-12">
+        <div className="mt-8">
           {isAuthenticated ? (
             <button
               onClick={() => navigate('/overview')}

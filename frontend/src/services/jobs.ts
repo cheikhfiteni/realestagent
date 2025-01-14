@@ -6,6 +6,8 @@ export interface Job {
   name: string;
   last_updated: string;
   listing_count: number;
+  cover_image_url?: string;
+  listing_images?: string[];
 }
 
 const cache = CacheService.getInstance();

@@ -137,25 +137,32 @@ function Feed() {
         <SortButton field="score" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex flex-col gap-6 max-w-6xl mx-auto">
         {sortedListings.map((listing) => (
           <div
             key={listing.id}
             onClick={() => handleListingClick(listing.link)}
-            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-hidden"
+            className="flex bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-hidden h-64"
           >
-            <img 
-              src={listing.cover_image_url} 
-              alt={listing.title}
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-4">
-              <h2 className="text-xl font-semibold mb-2">{listing.title}</h2>
-              <p className="text-gray-600 mb-2">{listing.location}</p>
-              <p className="text-2xl font-bold text-green-600 mb-3">
-                ${listing.cost.toLocaleString()}
-              </p>
-              <div className="grid grid-cols-3 gap-2 text-sm text-gray-600">
+            <div className="w-96 flex-shrink-0">
+              <img 
+                src={listing.cover_image_url} 
+                alt={listing.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex-grow p-6 flex flex-col">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h2 className="text-2xl font-semibold mb-2">{listing.title}</h2>
+                  <p className="text-gray-600">{listing.location}</p>
+                </div>
+                <p className="text-2xl font-bold text-green-600">
+                  ${listing.cost.toLocaleString()}
+                </p>
+              </div>
+              
+              <div className="flex gap-6 text-gray-600 mb-4">
                 <div>
                   <span className="font-medium">{listing.bedrooms}</span> beds
                 </div>
@@ -166,19 +173,22 @@ function Feed() {
                   <span className="font-medium">{listing.square_footage.toLocaleString()}</span> sqft
                 </div>
               </div>
-              <div className="mt-3 pt-3 border-t">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-blue-600 font-medium">
+
+              <div className="mt-auto">
+                <div className="text-gray-500 text-sm line-clamp-2 mb-3">
+                  {listing.trace}
+                </div>
+                <div className="pt-3 border-t">
+                  <span className="text-blue-600 font-medium text-lg">
                     Score: {listing.score.toFixed(2)}
                   </span>
-                  <span className="text-gray-500">{listing.trace}</span>
                 </div>
               </div>
             </div>
           </div>
         ))}
         {listings.length === 0 && (
-          <p className="text-center col-span-3 py-8 text-gray-500">No listings available.</p>
+          <p className="text-center py-8 text-gray-500">No listings available.</p>
         )}
       </div>
     </div>

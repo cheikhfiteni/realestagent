@@ -35,7 +35,7 @@ function Overview() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       <h1 className="text-3xl font-bold text-center mb-8 border-b-2 pb-2">
         Overview of All Jobs
       </h1>
@@ -54,19 +54,36 @@ function Overview() {
           <div
             key={job.id}
             onClick={() => handleJobClick(job.id)}
-            className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-all w-full"
+            className="flex items-center p-6 border rounded-lg cursor-pointer hover:bg-gray-50 transition-all w-full max-w-7xl mx-auto"
           >
-            <div className="flex items-center gap-8">
-              <h3 className="text-xl font-semibold min-w-[200px]">{job.name}</h3>
-              <div className="flex items-center gap-2 text-gray-600">
-                <Cloud size={16} />
-                <span>Last Updated: {new Date(job.last_updated).toLocaleString()}</span>
+            <div className="flex items-center gap-12 w-full">
+              <div className="relative w-72 h-40 flex-shrink-0">
+                {/* Stacked effect images - back to front */}
+                <div className="absolute inset-0 -left-6 top-0 bg-gray-50 rounded-lg -z-20 transform rotate-1" />
+                <div className="absolute inset-0 -left-3 top-0 bg-gray-100 rounded-lg -z-10 transform rotate-0.5" />
+                {/* Main image - most offset to bottom-right */}
+                <div className="absolute inset-0 left-0 top-0 bg-gray-200 rounded-lg overflow-hidden transform rotate-0">
+                  {job.cover_image_url ? (
+                    <img
+                      src={job.cover_image_url}
+                      alt={job.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-300" />
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                {job.listing_count || 0} Listings
-              </span>
+              <div className="flex flex-col gap-3 flex-grow">
+                <h3 className="text-2xl font-semibold">{job.name}</h3>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Cloud size={16} />
+                  <span>Last Updated: {new Date(job.last_updated).toLocaleString()}</span>
+                </div>
+                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full w-fit">
+                  {job.listing_count || 0} Listings
+                </span>
+              </div>
             </div>
           </div>
         ))}

@@ -43,10 +43,11 @@ function AppContent() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   const showFooter = isAuthenticated && location.pathname !== '/welcome';
+  const showBackButton = isAuthenticated && location.pathname !== '/welcome';
 
   return (
     <div className="min-h-screen flex flex-col">
-      <BackButton />
+      {showBackButton && <BackButton />}
       <main className="flex-grow flex flex-col">
         <Routes>
           <Route path="/welcome" element={<Home />} />

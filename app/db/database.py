@@ -157,15 +157,30 @@ async def get_user_jobs(user_id: UUID):
         .label('listing_count')
     )
 
+    # Subquery to get the highest scored listing's image for each job
+    latest_listing = (
+        select(Listing.image_urls)
+        .join(JobListingScore, JobListingScore.listing_id == Listing.id)
+        .where(JobListingScore.job_id == Job.id)
+        .order_by(JobListingScore.score.desc())
+        .limit(1)
+        .scalar_subquery()
+        .label('best_listing_images')
+    )
+
     query = (
-        select(Job, listing_count)
+        select(Job, listing_count, latest_listing)
         .where(Job.user_id == user_id)
         .order_by(Job.updated_at.desc())
     )
     
     async with get_async_db() as session:
         result = await session.execute(query)
-        return result.all()
+        jobs_data = []
+        for job, count, images in result.all():
+            image_urls = json.loads(images) if images else []
+            jobs_data.append((job, count, image_urls[0] if image_urls else NO_IMAGE_URL))
+        return jobs_data
 
 async def get_job_with_listings(job_id: UUID, user_id: UUID) -> Optional[Dict]:
     """Get a job's listings with their scores."""
