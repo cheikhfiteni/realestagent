@@ -3,28 +3,16 @@ import { Add, Cloud } from '@carbon/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import InputModal from '../components/InputModal';
-import { API_BASE_URL } from '../services/config';
-
-interface Job {
-  id: string;
-  name: string;
-  last_updated: string;
-}
+import { fetchJobs, invalidateJobsCache, type Job } from '../services/jobs';
 
 function Overview() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  const fetchJobs = async () => {
+  const loadJobs = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/jobs`, {
-        credentials: 'include',
-      });
-      console.log('Response:', response);
-      if (!response.ok) throw new Error('Failed to fetch jobs');
-      const data = await response.json();
-      console.log('Fetched jobs:', data);
+      const data = await fetchJobs();
       setJobs(data);
     } catch (error) {
       toast.error('Failed to fetch jobs');
@@ -32,7 +20,7 @@ function Overview() {
   };
 
   useEffect(() => {
-    fetchJobs();
+    loadJobs();
   }, []);
 
   const handleJobClick = (jobId: string) => {
@@ -40,14 +28,14 @@ function Overview() {
   };
 
   const handleAddJobSuccess = () => {
-    console.log('Job added successfully');
     setIsModalOpen(false);
-    fetchJobs();
+    invalidateJobsCache();
+    loadJobs();
     toast.success('Job added successfully');
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-5xl mx-auto">
       <h1 className="text-3xl font-bold text-center mb-8 border-b-2 pb-2">
         Overview of All Jobs
       </h1>
@@ -61,17 +49,24 @@ function Overview() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex flex-col gap-4">
         {jobs.map((job) => (
           <div
             key={job.id}
             onClick={() => handleJobClick(job.id)}
-            className="border-2 border-dotted p-4 rounded-lg cursor-pointer hover:bg-gray-50 transition-all"
+            className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-all w-full"
           >
-            <h3 className="text-xl font-semibold mb-2">{job.name}</h3>
-            <div className="flex items-center gap-2 text-gray-600">
-              <Cloud size={16} />
-              <span>Last Updated: {new Date(job.last_updated).toLocaleString()}</span>
+            <div className="flex items-center gap-8">
+              <h3 className="text-xl font-semibold min-w-[200px]">{job.name}</h3>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Cloud size={16} />
+                <span>Last Updated: {new Date(job.last_updated).toLocaleString()}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                {job.listing_count || 0} Listings
+              </span>
             </div>
           </div>
         ))}

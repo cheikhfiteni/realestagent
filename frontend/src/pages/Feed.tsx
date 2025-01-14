@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Cloud } from '@carbon/icons-react';
 import { toast } from 'react-hot-toast';
 import { API_BASE_URL } from '../services/config';
+import { getJob } from '../services/jobs';
 
 interface Post {
   id: string;
@@ -29,6 +30,8 @@ function Feed() {
   const [error, setError] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>('cost');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const job = jobId ? getJob(jobId) : null;
 
   useEffect(() => {
     const fetchListings = async () => {
@@ -111,12 +114,16 @@ function Feed() {
     <div className="p-6">
       <div className="mb-8">
         <div className="flex items-center gap-2">
-          <h1 className="text-3xl font-bold">Job Results</h1>
+          <h1 className="text-3xl font-bold">[ {job?.name || 'Loading...'} ]</h1>
           <span className="w-3 h-3 bg-green-500 rounded-full"></span>
         </div>
         <div className="flex items-center gap-2 text-gray-600 mt-2">
           <Cloud size={20} />
-          <span>Time last synced: {new Date(listings[0]?.last_updated || '').toLocaleString()}</span>
+          {job ? (
+            <span>Time last synced: {new Date(job.last_updated).toLocaleString()}</span>
+          ) : (
+            <span>No sync data available</span>
+          )}
         </div>
       </div>
 

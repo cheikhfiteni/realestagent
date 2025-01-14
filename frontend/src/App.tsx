@@ -1,35 +1,17 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { useAuth } from './contexts/AuthContext';
 import Home from './pages/Home';
 import Overview from './pages/Overview';
 import Changelog from './pages/Changelog';
 import Feed from './pages/Feed';
-
-function Navigation() {
-  const { isAuthenticated, logout } = useAuth();
-
-  return (
-    <nav>
-      <Link to="/">Home</Link>
-      {isAuthenticated ? (
-        <>
-          <Link to="/feed">Feed</Link>
-          <Link to="/overview">Overview</Link>
-          <Link to="/changelog">Changelog</Link>
-          <button onClick={logout}>Logout</button>
-        </>
-      ) : null}
-    </nav>
-  );
-}
+import BackButton from './components/BackButton';
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Navigation />
+        <BackButton />
         <Routes>
           <Route path="/welcome" element={<Home />} />
           <Route path="/" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
