@@ -50,6 +50,7 @@ class ListingOutput(BaseModel):
     square_footage: int
     score: float
     trace: str
+    link: str
 
 app = FastAPI()
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])

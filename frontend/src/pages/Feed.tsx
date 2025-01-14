@@ -17,7 +17,6 @@ interface Post {
   score: number;
   trace: string;
   link: string;
-  last_updated: string;
 }
 
 type SortField = keyof Omit<Post, 'cover_image_url' | 'id'>;
@@ -45,6 +44,7 @@ function Feed() {
         }
 
         const data = await response.json();
+        console.log('Fetched listings:', data);
         setListings(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
@@ -80,12 +80,25 @@ function Feed() {
       : (bValue as number) - (aValue as number);
   });
 
-  const handleListingClick = (link: string) => {
-    if (!link) {
+  const handleListingClick = (e: React.MouseEvent, link: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('Handling listing click, full listing:', listings.find(l => l.link === link));
+    
+    if (!link || link === 'undefined') {
+      console.log('No link available');
       toast.error('No link available for this listing');
       return;
     }
-    window.open(link, '_blank');
+
+    try {
+      console.log('Opening link in new tab:', link);
+      window.open(link, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('Error opening link:', error);
+      toast.error('Failed to open listing');
+    }
   };
 
   if (loading) {
@@ -141,50 +154,57 @@ function Feed() {
         {sortedListings.map((listing) => (
           <div
             key={listing.id}
-            onClick={() => handleListingClick(listing.link)}
             className="flex bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-hidden h-64"
           >
-            <div className="w-96 flex-shrink-0">
-              <img 
-                src={listing.cover_image_url} 
-                alt={listing.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="flex-grow p-6 flex flex-col">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h2 className="text-2xl font-semibold mb-2">{listing.title}</h2>
-                  <p className="text-gray-600">{listing.location}</p>
-                </div>
-                <p className="text-2xl font-bold text-green-600">
-                  ${listing.cost.toLocaleString()}
-                </p>
+            <a
+              href={listing.link}
+              onClick={(e) => handleListingClick(e, listing.link)}
+              className="flex w-full"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <div className="w-96 flex-shrink-0">
+                <img 
+                  src={listing.cover_image_url} 
+                  alt={listing.title}
+                  className="w-full h-full object-cover"
+                />
               </div>
-              
-              <div className="flex gap-6 text-gray-600 mb-4">
-                <div>
-                  <span className="font-medium">{listing.bedrooms}</span> beds
+              <div className="flex-grow p-6 flex flex-col">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h2 className="text-2xl font-semibold mb-2">{listing.title}</h2>
+                    <p className="text-gray-600">{listing.location}</p>
+                  </div>
+                  <p className="text-2xl font-bold text-green-600">
+                    ${listing.cost.toLocaleString()}
+                  </p>
                 </div>
-                <div>
-                  <span className="font-medium">{listing.bathrooms}</span> baths
+                
+                <div className="flex gap-6 text-gray-600 mb-4">
+                  <div>
+                    <span className="font-medium">{listing.bedrooms}</span> beds
+                  </div>
+                  <div>
+                    <span className="font-medium">{listing.bathrooms}</span> baths
+                  </div>
+                  <div>
+                    <span className="font-medium">{listing.square_footage.toLocaleString()}</span> sqft
+                  </div>
                 </div>
-                <div>
-                  <span className="font-medium">{listing.square_footage.toLocaleString()}</span> sqft
-                </div>
-              </div>
 
-              <div className="mt-auto">
-                <div className="text-gray-500 text-sm line-clamp-2 mb-3">
-                  {listing.trace}
-                </div>
-                <div className="pt-3 border-t">
-                  <span className="text-blue-600 font-medium text-lg">
-                    Score: {listing.score.toFixed(2)}
-                  </span>
+                <div className="mt-auto">
+                  <div className="text-gray-500 text-sm line-clamp-2 mb-3">
+                    {listing.trace}
+                  </div>
+                  <div className="pt-3 border-t">
+                    <span className="text-blue-600 font-medium text-lg">
+                      Score: {listing.score.toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </a>
           </div>
         ))}
         {listings.length === 0 && (

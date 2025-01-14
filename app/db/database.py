@@ -215,7 +215,8 @@ async def get_job_with_listings(job_id: UUID, user_id: UUID) -> Optional[Dict]:
                 "bathrooms": listing.bathrooms,
                 "square_footage": listing.square_footage,
                 "score": score.score,
-                "trace": score.trace
+                "trace": score.trace,
+                "link": listing.link
             })
         
         return formatted_listings
