@@ -17,8 +17,8 @@ function Footer() {
   if (location.pathname === '/welcome') return null;
   
   return (
-    <footer className="mt-auto py-6">
-      <div className="container mx-auto px-8">
+    <footer className="w-full mt-auto py-6">
+      <div className="max-w-[768px] mx-auto px-8">
         <div className="flex justify-between items-center text-sm text-gray-500">
           <div className="space-x-6">
             <Link to="/overview" className="hover:text-gray-900">Overview</Link>
@@ -43,7 +43,7 @@ function AppContent() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   const showFooter = isAuthenticated && location.pathname !== '/welcome';
-  const showBackButton = isAuthenticated && location.pathname !== '/welcome';
+  const showBackButton = isAuthenticated && location.pathname !== '/welcome' && location.pathname !== '/overview';
 
   return (
     <div className="min-h-screen flex flex-col">

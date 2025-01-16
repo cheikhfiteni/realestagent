@@ -90,6 +90,18 @@ button:focus-visible {
   animation: fadeIn 0.5s ease-out forwards;
 }
 
+.delayed-fade-in {
+  opacity: 0;
+  animation: fadeIn 1s ease-out forwards;
+  animation-delay: 0.3s;
+}
+
+.delayed-fade-in-2 {
+  opacity: 0;
+  animation: fadeIn 1s ease-out forwards;
+  animation-delay: 0.4s;
+}
+
 @keyframes dropFadeIn {
   from {
     opacity: 0;

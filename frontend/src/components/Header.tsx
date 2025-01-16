@@ -6,7 +6,7 @@ function Header() {
   return (
     <div 
       onClick={() => navigate('/welcome')} 
-      className="flex items-center gap-2 cursor-pointer"
+      className="flex items-center gap-2 cursor-pointer delayed-fade-in"
     >
       <img src="/vite.svg" alt="Logo" className="w-8 h-8" />
       <span className="text-xl font-semibold font-serif">ApartmentFinder</span>
@@ -14,4 +14,4 @@ function Header() {
   );
 }
 
-export default Header; 
+export default Header;
