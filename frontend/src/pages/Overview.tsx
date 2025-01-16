@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import InputModal from '../components/InputModal';
 import { fetchJobs, invalidateJobsCache, type Job } from '../services/jobs';
+import Header from '../components/Header';
 
 function getTimeAgo(date: string) {
   const now = new Date();
@@ -52,7 +53,12 @@ function Overview() {
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold text-center mb-8 border-b-2 pb-2">
+        <div className="w-full">
+          <div className="flex justify-between items-center">
+            <Header />
+        </div>
+      </div>
+      <h1 className="text-3xl font-bold text-center mt-5 mb-8 border-b-2 pb-2">
         Overview of All Jobs
       </h1>
       
@@ -70,7 +76,7 @@ function Overview() {
           <div
             key={job.id}
             onClick={() => handleJobClick(job.id)}
-            className="flex bg-white rounded-lg cursor-pointer hover:bg-gray-50 transition-all border border-dotted border-gray-300 shadow-md hover:shadow-lg p-5 overflow-hidden"
+            className="flex bg-white slide-in rounded-lg cursor-pointer hover:bg-gray-50 transition-all border border-dotted border-gray-300 shadow-md hover:shadow-lg p-5 overflow-hidden"
           >
             <div className="flex flex-col md:flex-row gap-12 w-full">
               <div className="relative w-full md:w-72 h-36 flex-shrink-0">

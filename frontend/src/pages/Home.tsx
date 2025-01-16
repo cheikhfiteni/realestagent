@@ -2,12 +2,11 @@ import '../App.css'
 import { Auth } from '../components/Auth'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
 function Home() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [shouldAnimate, setShouldAnimate] = useState(true);
 
   useEffect(() => {
     // Disable scrolling
@@ -19,21 +18,8 @@ function Home() {
     };
   }, []);
 
-  useEffect(() => {
-    const lastVisit = localStorage.getItem('lastHomeVisit');
-    const now = Date.now();
-    
-    if (lastVisit) {
-      const timeSinceLastVisit = now - parseInt(lastVisit);
-      // Only animate if it's been more than 15 minutes
-      setShouldAnimate(timeSinceLastVisit > 15 * 60 * 1000);
-    }
-    
-    localStorage.setItem('lastHomeVisit', now.toString());
-  }, []);
-
   return (
-    <div className={`flex-grow flex items-center justify-center ${shouldAnimate ? 'animate-fadeIn' : ''}`}>
+    <div className="flex-grow flex items-center justify-center animate-fadeIn">
       <div className="max-w-4xl w-full px-8">
         <div className="space-y-6">
           <p className="text-gray-600 text-xl leading-relaxed indent-8">
@@ -55,7 +41,7 @@ function Home() {
           {isAuthenticated ? (
             <button
               onClick={() => navigate('/overview')}
-              className="text-xl px-8 py-4 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors animate-bounce"
+              className="text-xl px-8 py-4 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors animate-shake"
             >
               Find Your Next Home
             </button>

@@ -48,7 +48,7 @@ function AppContent() {
   return (
     <div className="min-h-screen flex flex-col">
       {showBackButton && <BackButton />}
-      <main className="flex-grow flex flex-col">
+      <main className="flex-grow flex flex-col w-full">
         <Routes>
           <Route path="/welcome" element={<Home />} />
           <Route path="/" element={<ProtectedRoute><Overview /></ProtectedRoute>} />

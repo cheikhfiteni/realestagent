@@ -154,7 +154,7 @@ function Feed() {
         {sortedListings.map((listing) => (
           <div
             key={listing.id}
-            className="flex bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-hidden h-64"
+            className="flex bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-hidden h-64 animate-dropFadeIn"
           >
             <a
               href={listing.link}
