@@ -98,7 +98,7 @@ button:focus-visible {
 
 .delayed-fade-in-2 {
   opacity: 0;
-  animation: fadeIn 1s ease-out forwards;
+  animation: fadeIn 0.9s ease-out forwards;
   animation-delay: 0.4s;
 }
 
