@@ -34,6 +34,7 @@ class StreeteasyScraper(BaseScraper):
             location = self.config.location.replace(" ", "-")
             base += location 
 
+        # Search parameters
         parems = []
         sortby = []
         if self.config.min_price and self.config.max_price:
@@ -102,3 +103,51 @@ class StreeteasyScraper(BaseScraper):
                 break
         print(f"[DEBUG] Total links found: {len(all_links)}")
         return all_links
+
+    @staticmethod
+    def _extract_housing_details(driver):
+        """Extract housing details with improved reliability."""
+        bedrooms = bathrooms = square_footage = 0
+
+        try:
+            selectors = [".Body_base_gyzqw"]
+            for selector in selectors:
+                
+                elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    text = element.text.lower()
+
+                    # Bedrooms
+                    br_match = re.search(r'(\d+)\s*bed', text)
+                    if br_match and not bedrooms:
+                        bedrooms = int(br_match.group(1))
+
+                    # Bathrooms
+                    ba_match = re.search(r'(\d+)\s*bath', text)
+                    if ba_match and not bathrooms:
+                        bathrooms = float(ba_match.group(1))
+
+                    if "-" not in text:
+                        sqft_match = re.search(r'(\d+(?:\.\d+)?)\s*ft²', text)
+                        if sqft_match and not square_footage:
+                            square_footage = round(float(sqft_match.group(1)))
+                if bedrooms and bathrooms and square_footage:
+                    break
+                
+        except Exception as e:
+            print(f"Error extracting housing details: {str(e)}")
+
+        return bedrooms, bathrooms, square_footage
+        
+    @staticmethod
+    def _extract_image_urls(driver) -> list[str]:
+        """Extract image URLs from the listing page."""
+        image_urls = []
+
+        try:
+            selectors = [".MediaCarousel_mediaCarouselImageWrapper_p3Fsm",
+                        "[data-testid='media-carousel-component-media-carousel-thumbs-component']"
+                        ]
+            for selection in selectors:
+                try:
+                    
