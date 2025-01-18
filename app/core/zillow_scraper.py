@@ -75,29 +75,31 @@ class ZillowScraper(BaseScraper):
         print(f"[DEBUG] Constructed Zillow search URL: {full_url}")
         return full_url
     
-    async def get_listing_urls(self) -> List[str]:
-       curr_page = 1
-       visited_urls = set()
-       all_links = []
+    # async def get_listing_urls(self) -> List[str]:
+    #    curr_page = 1
+    #    visited_urls = set()
+    #    all_links = []
 
-       while True:
-           current_url = self.get_search_url(self, curr_page)
-           print(f"[DEBUG] Navigating to page {curr_page}")
-           self.driver.get(current_url)
-           await asyncio.sleep(self.sleep_time)
+    #    while True:
+    #        current_url = self.get_search_url(self, curr_page)
+    #        print(f"[DEBUG] Navigating to page {curr_page}")
+    #        self.driver.get(current_url)
+    #        await asyncio.sleep(self.sleep_time)
 
-           if self.driver.current_url in visited_urls:
-               print(f"[DEBUG] Already visited url {self.driver.current_url}, breaking loop")
-               break
-           visited_urls.add(self.driver.current_url)
-           print(f"[DEBUG] Added {self.driver.current_url} to visited URLs")
+    #        if self.driver.current_url in visited_urls:
+    #            print(f"[DEBUG] Already visited url {self.driver.current_url}, breaking loop")
+    #            break
+    #        visited_urls.add(self.driver.current_url)
+    #        print(f"[DEBUG] Added {self.driver.current_url} to visited URLs")
 
-           try:
-                print("[DEBUG] Waiting for gallery cards to load...")
-                WebDriverWait(self.driver, 10).until(
-                    # Not sure if this is right css selector zillow source code so hard to go through
-                    # Alternative to css selectors is property date in source code but code for that complicated for me
-                    EC.presence_of_element_located((By.CSS_SELECTOR, ".ListItem-c11n-8-107-0__sc-13rwu5a-0 StyledListCardWr apper-srp-8-107-0_ sc-wtsrtn-0 dAZKuw XoFGK"))
-                )
+    #        try:
+    #             print("[DEBUG] Waiting for gallery cards to load...")
+    #             WebDriverWait(self.driver, 10).until(
+    #                 # Not sure if this is right css selector zillow source code so hard to go through
+    #                 # Alternative to css selectors is property date in source code but code for that complicated for me
+    #                 EC.presence_of_element_located((By.CSS_SELECTOR, ".ListItem-c11n-8-107-0__sc-13rwu5a-0 StyledListCardWr apper-srp-8-107-0_ sc-wtsrtn-0 dAZKuw XoFGK"))
+    #             )
         
-        # TODO: BIGGEST PROBLEMS: zillow links to each listing not in page source 
+    #         # TODO: BIGGEST PROBLEMS: zillow links to each listing not in page source 
+                
+                
