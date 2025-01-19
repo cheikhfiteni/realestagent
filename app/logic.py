@@ -9,7 +9,7 @@ from app.db.database import (
 
 from app.core.base_scraper import ScrapingConfig
 from app.core.craiglist_scraper import CraigslistScraper
-
+from app.services.celery_app import celery
 BATCH_SIZE = 5
 SLEEP_TIME = 0.2
 
@@ -84,16 +84,22 @@ async def evaluate_job_listings(job: Job):
                 print(f"Error evaluating listing {score.listing_id}: {str(e)}")
                 continue
 
-async def run_job(job_id: UUID):
+@celery.task(bind=True, max_retries=1)
+def run_single_job(self, job_id: UUID):
     """Run a complete job cycle - scraping and evaluation."""
-    async with get_async_db() as session:
-        job = await session.get(Job, job_id)
-        if not job:
-            raise ValueError(f"Job {job_id} not found")
-        print(f"Running scrape listings for job {job_id}")
-        await scrape_listings(job)
-        print(f"Running evaluate job listings for job {job_id}")
-        await evaluate_job_listings(job)
+    import asyncio
+    
+    async def _run_job():
+        async with get_async_db() as session:
+            job = await session.get(Job, job_id)
+            if not job:
+                raise ValueError(f"Job {job_id} not found")
+            print(f"Running scrape listings for job {job_id}")
+            await scrape_listings(job)
+            print(f"Running evaluate job listings for job {job_id}")
+            await evaluate_job_listings(job)
+    
+    asyncio.run(_run_job())
 
 async def test_just_evaluation(job_id: UUID):
     async with get_async_db() as session:

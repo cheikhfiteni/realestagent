@@ -3,7 +3,7 @@ from asyncio import Lock
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from app.logic import run_job as run_single_job, test_just_evaluation
+from app.logic import run_single_job, test_just_evaluation
 from app.services.authentication import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, router as auth_router, get_current_user
 from pydantic import BaseModel
 from typing import Dict, Optional, List
@@ -20,7 +20,6 @@ from functools import wraps
 
 from app.config import FRONTEND_URL
 import httpx
-
 class JobInput(BaseModel):
     name: str
     min_bedrooms: Optional[int] = 4
@@ -101,7 +100,7 @@ async def run_scheduled_jobs_async():
     if not _job_lock.locked():
         async with _job_lock:
             if (pending_job := await get_next_pending_job()):
-                await run_single_job(pending_job.id)
+                run_single_job.delay(pending_job.id)
 
 @app.get("/test-evaluation")
 async def run_test_evaluation():
@@ -148,17 +147,13 @@ async def get_job(job_id: UUID, current_user: User = Depends(get_current_user)):
     return listings
 
 @app.post("/jobs/add")
-async def add_job(job_input: JobInput, current_user: User = Depends(get_current_user), background_tasks: BackgroundTasks = BackgroundTasks()):
+async def add_job(job_input: JobInput, current_user: User = Depends(get_current_user)):
     """Create a new job from input template"""
     try:
-        # Create template
         template = await create_job_template(current_user.id, job_input.dict())
-        
-        # Create job
         job = await create_job(current_user.id, template.id, job_input.name)
         
-        # Run initial job
-        background_tasks.add_task(run_single_job, job.id)
+        run_single_job.delay(job.id)
         
         return {"status": "created", "job_id": job.id}
     except Exception as e:

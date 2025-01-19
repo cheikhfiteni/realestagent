@@ -46,6 +46,18 @@ services:
         soft: 65536
         hard: 65536
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   db:
     image: postgres:14
     volumes:
@@ -72,6 +84,7 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+      - REDIS_URL=redis://redis:6379/0
       - LOG_LEVEL=INFO
       - PORT=8000
       - PYTHONUNBUFFERED=1
@@ -87,12 +100,27 @@ services:
         condition: service_healthy
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - .:/app
       - /app/venv
       - /app/__pycache__
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
+  worker:
+    build: .
+    networks:
+      - app_network
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    command: celery -A app.services.celery_app worker --loglevel=DEBUG
 
 networks:
   app_network:

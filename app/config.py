@@ -16,6 +16,7 @@ print(f"\033[35mThe database_url is at {DATABASE_URL}\033[0m")
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 SELENIUM_HOST = os.getenv("SELENIUM_HOST", "http://selenium")
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 NO_IMAGE_URL = 'https://i.kym-cdn.com/entries/icons/original/000/049/021/duck_smoking_gif.jpg'
 
