@@ -1,5 +1,4 @@
 
-
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -206,11 +205,91 @@ class StreeteasyScraper(BaseScraper):
             price = int(price_element.text.replace("$", "").replace(",", "")) if price_element else 0
 
             try:
-                location_element = self.driver.find_element(By.CLASS_NAME, "Body_base_gyzqw AboutBuildingSection_address__TdYEX")
+                location_element = self.driver.find_element(By.CLASS_NAME, "SecondarySmall_base_7QU-o SecondarySmall_fontWeightSemiBold_yM5Qo")
                 location = location_element.text if location_element else ""
 
             except:
                 # ? When tested latitude longitude location said bot detected?? so left out
                 location = ""
 
-            neighborhood_element = self.driver.find_element(B)
+            neighborhood_element = self.driver.find_element(By.CLASS_NAME, "Body_base_gyzqw AboutBuildingSection_address__TdYEX")
+            neighborhood = neighborhood_element.text if neighborhood_element else ""
+
+            description_element = self.driver.find_element(By.CLASS_NAME, "ListingDescription_shortDescription__ySvRK")
+            description = self._normalize_description(description_element.get_attribute("innerHTML")) if description_element else ""
+
+            bedrooms, bathrooms, square_footage = self._extract_housing_details(self.driver)
+            image_urls = self._extract_image_urls(self.driver)
+
+            await asyncio.sleep(self.sleep_time)
+
+            return Listing(
+                hash=_listing_hash(post_id),
+                title=title,
+                price=price,
+                link=url,
+                post_id=post_id,
+                description=description,
+                location=location,
+                neighborhood=neighborhood,
+                bedrooms=bedrooms, 
+                bathrooms=bathrooms,
+                square_footage=square_footage,
+                image_urls=json.dumps(image_urls)
+            )
+        
+        except Exception as e:
+            self.logger.error(f"Error scraping listing: {str(e)}")
+            return None
+
+    def validate_listing(self, listing: Listing) -> bool:
+        """Validate listing meets minimum criteria"""
+        print(f"[DEBUG] Validating listing: {listing.title}, {listing.price}, {listing.bedrooms}, {listing.bathrooms}, {listing.square_footage}")
+        if self.config.min_bedrooms and listing.bedrooms < self.config.min_bedrooms:
+            return False
+        if self.config.min_bathrooms and listing.bathrooms < self.config.min_bathrooms:
+            return False
+        if self.config.min_square_feet and listing.square_footage < self.config.min_square_feet:
+            return False
+        return True
+    
+
+    async def load_existing_hashes(self):
+        """Load existing listing hashes from database"""
+        self.existing_hashes = get_stored_listing_hashes()
+        print(f"[DEBUG] Loaded {len(self.existing_hashes)} existing listing hashes")
+
+    async def scrape(self) -> AsyncGenerator[ScrapeOutput, None]:
+        """Main scraping method that yields either new listings or existing listing hashes."""
+        print(f"[DEBUG] In the craiglist scraping loop for the task {self.config.template_id}")
+        try:
+            self.logger.info("Starting scraping process")
+            # Load existing hashes before starting
+            await self.load_existing_hashes()
+            urls = await self.get_listing_urls()
+            print(f"[DEBUG] Found {len(urls)} listings")
+            for url in urls:
+                # Check if listing already exists before scraping
+                post_id = url.split("/")[-1].split(".")[0]
+                listing_hash = _listing_hash(post_id)
+                
+                if listing_hash in self.existing_hashes:
+                    self.logger.info(f"Found existing listing: {url}")
+                    yield listing_hash
+                    continue
+
+                self.existing_hashes.add(listing_hash)
+                self.logger.info(f"Scraping listing from URL: {url}")
+                listing = await self.scrape_listing(url)
+                if listing:
+                    self.logger.info(f"Successfully scraped listing: {listing.title}")
+                    if self.validate_listing(listing):
+                        self.logger.info(f"Listing passed validation: {listing.title}")
+                        yield listing
+                    else:
+                        self.logger.info(f"Listing failed validation: {listing.title}")
+                else:
+                    self.logger.warning(f"Failed to scrape listing from URL: {url}")
+        except Exception as e:
+            self.logger.error(f"Error in scrape method: {str(e)}")
+            raise
