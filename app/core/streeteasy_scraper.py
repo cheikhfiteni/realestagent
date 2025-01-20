@@ -146,8 +146,71 @@ class StreeteasyScraper(BaseScraper):
 
         try:
             selectors = [".MediaCarousel_mediaCarouselImageWrapper_p3Fsm",
-                        "[data-testid='media-carousel-component-media-carousel-thumbs-component']"
+                        ".MediaCarousel_thumbsContainer_A9ynS"
                         ]
-            for selection in selectors:
+            # ? I dont split into two cases of multi-image/single image dont see what I have to
+            for selector in selectors:
                 try:
-                    
+                    # Locate the container for images
+                    container = driver.find_element(By.CSS_SELECTOR, selector)
+
+                    # Extract image URLs from <img> tags
+                    img_elements = container.find_elements(By.XPATH, ".//img[starts-with(@alt, 'photo')]")
+                    for img in img_elements:
+                        src = img.get_attribute("src")
+                        if src:
+                            high_res_url = src.replace("800_400", "1200_800")  # Adjust resolution
+                            image_urls.append(high_res_url)
+
+                    # If images found, stop looking further
+                    if image_urls:
+                        return image_urls
+
+                except Exception:
+                    # Skip to next selector on failure
+                    continue
+
+            return image_urls
+        
+        except Exception as e:
+            print(f"Error extracting images: {str(e)}")
+            return []  # Return empty list on any error
+    
+    @staticmethod
+    def _normalize_description(html_content: str) -> str:
+        """Convert HTML description to clean text with normalized newlines."""
+       # TODO: Figure out if how to remove any special divs 
+        # Replace <br> and <br/> tags with newlines
+        text = re.sub(r'<br\s*/?>|</div>|</p>', '\n', html_content)
+        # Remove any remaining HTML tags
+        text = re.sub(r'<[^>]+>', '', text)
+        # Clean up extra whitespace and newlines
+        text = re.sub(r'\n\s*\n', '\n\n', text.strip())
+        return text
+        
+    async def scrape_listing(self, url: str) -> Optional[Listing]:
+        try:
+            self.driver.get(url)
+
+            # Title, price, etc heading
+            WebDriverWait(self.driver, 10).until(
+                  EC.presence_of_all_elements_located(By.CSS_SELECTOR, "[data-testid='home-info-section']")
+            )
+
+            title_element = self.driver.find_element(By.CSS_SELECTOR, "[data-testid='home-info-section']")
+            title = title_element.text if title_element else ""
+
+            post_id = url.split("/")[-1].split(".")[0]
+
+            price_element = self.driver.find_element(By.CLASS_NAME, "SecondaryLarge_base_XChiP SecondaryLarge_fontWeightLight_AQq-k PriceInfo_price__HK81g")
+            price = int(price_element.text.replace("$", "").replace(",", "")) if price_element else 0
+
+            try:
+                location_element = self.driver.find_element(By.CLASS_NAME, "Body_base_gyzqw AboutBuildingSection_address__TdYEX")
+                location = location_element.text if location_element else ""
+
+            except:
+                # ? When tested latitude longitude location said bot detected?? so left out
+                location = ""
+
+            neighborhood_element = self.driver.find_element(B)
