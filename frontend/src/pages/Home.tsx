@@ -27,7 +27,7 @@ function Home() {
           </p>
 
           <p className="text-gray-600 text-xl leading-relaxed indent-8">
-            At the same time, the difference between a great versus or good rental is immense. ApartmentFinder makes that easy. You give us the criteria, budget, range, and we run daily searches for the. On $20/month.
+            At the same time, the difference between a good versus great rental is immense. If only you could find a way to keep an eye on the market <em>all the time</em>. ApartmentFinder makes that easy. You give us the criteria, budget, range, and we run multiple searches a day for the best options. We send you the best options every day. Only $5/month.
           </p>
 
           <div className="text-left">
