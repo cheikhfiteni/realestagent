@@ -7,6 +7,7 @@ import Overview from './pages/Overview';
 import Changelog from './pages/Changelog';
 import Feed from './pages/Feed';
 import SignIn from './pages/SignIn';
+import About from './pages/About';
 import BackButton from './components/BackButton';
 import { Link } from 'react-router-dom';
 
@@ -24,7 +25,7 @@ function Footer() {
           <div className="space-x-6">
             <Link to="/overview" className="hover:text-gray-900">Overview</Link>
             <Link to="/changelog" className="hover:text-gray-900">Changelog</Link>
-            <Link to="/welcome" className="hover:text-gray-900">About</Link>
+            <Link to="/About" className="hover:text-gray-900">About</Link>
           </div>
           {isAuthenticated && (
             <button
@@ -51,6 +52,7 @@ function AppContent() {
       {showBackButton && <BackButton />}
       <main className="flex-grow flex flex-col w-full">
         <Routes>
+          <Route path="/about" element={<About />} />
           <Route path="/welcome" element={<Home />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
