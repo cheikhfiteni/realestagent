@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import Overview from './pages/Overview';
 import Changelog from './pages/Changelog';
 import Feed from './pages/Feed';
+import SignIn from './pages/SignIn';
 import BackButton from './components/BackButton';
 import { Link } from 'react-router-dom';
 
@@ -51,6 +52,7 @@ function AppContent() {
       <main className="flex-grow flex flex-col w-full">
         <Routes>
           <Route path="/welcome" element={<Home />} />
+          <Route path="/signin" element={<SignIn />} />
           <Route path="/" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
           <Route path="/feed/:jobId" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
           <Route path="/overview" element={<ProtectedRoute><Overview /></ProtectedRoute>} />

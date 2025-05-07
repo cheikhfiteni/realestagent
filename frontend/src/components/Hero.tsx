@@ -26,7 +26,7 @@ const Hero: React.FC<HeroProps> = ({ onGetStartedClick }) => {
               >
                 Get Started Free
               </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-6">
+              <Button variant="outline" size="lg" className="text-lg px-8 py-6" onClick={() => window.location.href = '#how-it-works'}>
                 How It Works
               </Button>
             </div>

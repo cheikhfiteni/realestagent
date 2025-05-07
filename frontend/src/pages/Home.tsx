@@ -19,19 +19,14 @@ const Home = () => {
     if (isAuthenticated) {
       navigate('/overview');
     } else {
-      console.log('User not authenticated, showing Auth component needs to be implemented');
+      navigate('/signin');
     }
   };
 
   return (
     <div className="min-h-screen">
-      <Navbar />
+      <Navbar onGetStartedClick={handleHeroAction} />
       <Hero onGetStartedClick={handleHeroAction} />
-      {!isAuthenticated && (
-        <div className="flex-grow flex items-center justify-center py-12">
-          <Auth />
-        </div>
-      )}
       <Features />
       <HowItWorks />
       <Pricing />
