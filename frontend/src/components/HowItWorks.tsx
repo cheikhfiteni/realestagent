@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 const steps = [
@@ -36,7 +35,6 @@ const HowItWorks = () => {
         </div>
         
         <div className="relative">
-          <div className="absolute hidden lg:block top-24 left-0 right-0 h-1 bg-gradient-to-r from-apartment-blue to-apartment-green"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {steps.map((step, index) => (
               <div 
