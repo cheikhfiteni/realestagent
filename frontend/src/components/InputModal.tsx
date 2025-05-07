@@ -138,7 +138,7 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 animate-fadeIn">
-      <div ref={modalRef} className="bg-card text-card-foreground rounded-lg shadow-xl p-6 w-full max-w-lg animate-dropFadeIn">
+      <div ref={modalRef} className="bg-card text-card-foreground rounded-lg shadow-xl p-6 w-full max-w-xl animate-dropFadeIn">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-primary">Create New Job</h2>
           <button
