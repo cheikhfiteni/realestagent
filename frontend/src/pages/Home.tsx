@@ -7,7 +7,6 @@ import Pricing from '../components/Pricing';
 import Testimonials from '../components/Testimonials';
 import FAQ from '../components/FAQ';
 import Footer from '../components/Footer';
-import { Auth } from '../components/Auth';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -26,12 +25,24 @@ const Home = () => {
   return (
     <div className="min-h-screen">
       <Navbar onGetStartedClick={handleHeroAction} />
-      <Hero onGetStartedClick={handleHeroAction} />
-      <Features />
-      <HowItWorks />
-      <Pricing />
-      <Testimonials />
-      <FAQ />
+      <div className="bg-background">
+        <Hero onGetStartedClick={handleHeroAction} />
+      </div>
+      <div className="bg-apartment-light">
+        <Features />
+      </div>
+      <div className="bg-background">
+        <HowItWorks />
+      </div>
+      <div className="bg-apartment-light">
+        <Pricing />
+      </div>
+      <div className="bg-background">
+        <Testimonials />
+      </div>
+      <div className="bg-apartment-light">
+        <FAQ />
+      </div>
       <Footer />
     </div>
   );

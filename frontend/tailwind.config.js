@@ -51,6 +51,10 @@ export default {
         },
         'apartment-blue': 'hsl(var(--primary))',
         'apartment-green': 'hsl(var(--secondary))',
+        apartment: {
+          dark: '#1A1F2C',
+          light: '#F1F0FB'
+        }
       },
       borderRadius: {
         lg: "var(--radius)",
