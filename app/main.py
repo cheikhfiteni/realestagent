@@ -99,7 +99,7 @@ def scheduled_task(interval_minutes: int):
 
 _job_lock = Lock()
 
-@scheduled_task(interval_minutes=60*24)
+@scheduled_task(interval_minutes=1)
 async def run_scheduled_jobs_async():
     if not _job_lock.locked():
         async with _job_lock:

@@ -12,6 +12,9 @@ from app.models.models import Listing
 from app.core.base_scraper import BaseScraper, ScrapingConfig, ScrapeOutput
 from app.db.database import _listing_hash, get_stored_listing_hashes
 
+# Regex to allow only alphanumeric characters for Craigslist location subdomains
+VALID_LOCATION_REGEX = re.compile(r"^[a-zA-Z0-9]+$")
+
 class CraigslistScraper(BaseScraper):
     def __init__(self, config: ScrapingConfig):
         super().__init__(config)
@@ -29,7 +32,13 @@ class CraigslistScraper(BaseScraper):
         # Build base URL with location if provided
         base = "https://"
         if self.config.location:
-            base += f"{self.config.location.lower()}."
+            # Sanitize location to prevent redirection to arbitrary domains
+            clean_location = self.config.location.lower().strip()
+            if not VALID_LOCATION_REGEX.match(clean_location):
+                raise ValueError(f"Invalid location format: '{self.config.location}'. Only alphanumeric characters are allowed.")
+            else:
+                base += f"{clean_location}."
+        
         base += "craigslist.org/search/apa"
 
         # Build query parameters
@@ -42,10 +51,10 @@ class CraigslistScraper(BaseScraper):
             params.append(f"min_price={int(self.config.min_price)}")
         if self.config.max_price:
             params.append(f"max_price={self.config.max_price}")
-        if self.config.zipcode:
-            params.append(f"postal={self.config.zipcode}")
-        if self.config.search_radius_miles:
-            params.append(f"search_distance={self.config.search_radius_miles}")
+        if self.config.zipcode and (clean_zipcode := re.sub(r"[^0-9]", "", str(self.config.zipcode))):
+            params.append(f"postal={clean_zipcode}")
+        if self.config.search_radius_miles and (clean_search_radius := re.sub(r"[^0-9]", "", str(self.config.search_radius_miles))):
+            params.append(f"search_distance={clean_search_radius}")
 
         # Combine URL parts
         query_string = "&".join(params)
