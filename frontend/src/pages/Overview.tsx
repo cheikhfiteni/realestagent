@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Add, Cloud } from '@carbon/icons-react';
+import { Add, Cloud, UserFollow } from '@carbon/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import InputModal from '../components/InputModal';
+import InviteModal from '../components/InviteModal';
 import { fetchJobs, invalidateJobsCache, type Job } from '../services/jobs';
 import Header from '../components/Header';
 
@@ -24,7 +25,9 @@ function getTimeAgo(date: string) {
 
 function Overview() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddJobModalOpen, setIsAddJobModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [selectedJobIdForInvite, setSelectedJobIdForInvite] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const loadJobs = async () => {
@@ -45,10 +48,26 @@ function Overview() {
   };
 
   const handleAddJobSuccess = () => {
-    setIsModalOpen(false);
+    setIsAddJobModalOpen(false);
     invalidateJobsCache();
     loadJobs();
     toast.success('Job added successfully');
+  };
+
+  const handleOpenInviteModal = (jobId: string) => {
+    setSelectedJobIdForInvite(jobId);
+    setIsInviteModalOpen(true);
+  };
+
+  const handleCloseInviteModal = () => {
+    setIsInviteModalOpen(false);
+    setSelectedJobIdForInvite(null);
+  };
+
+  const handleInviteSent = () => {
+    // Optionally, you can add logic here if needed after an invite is sent,
+    // like a specific toast or data refresh if not handled by loadJobs.
+    // For now, closing the modal is handled by the modal itself.
   };
 
   return (
@@ -64,7 +83,7 @@ function Overview() {
           
           <div className="flex justify-end mb-6">
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => setIsAddJobModalOpen(true)}
               className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
             >
               <Add size={20} /> Add New Job
@@ -110,6 +129,13 @@ function Overview() {
                       <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                         {job.listing_count || 0} Listings
                       </span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleOpenInviteModal(job.id); }}
+                        className="ml-4 p-2 rounded-full hover:bg-gray-200 transition-colors"
+                        title="Invite user to this job"
+                      >
+                        <UserFollow size={20} className="text-blue-500" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -117,10 +143,18 @@ function Overview() {
             ))}
           </div>
 
-          {isModalOpen && (
+          {isAddJobModalOpen && (
             <InputModal
-              onClose={() => setIsModalOpen(false)}
+              onClose={() => setIsAddJobModalOpen(false)}
               onSuccess={handleAddJobSuccess}
+            />
+          )}
+
+          {isInviteModalOpen && selectedJobIdForInvite && (
+            <InviteModal
+              jobId={selectedJobIdForInvite}
+              onClose={handleCloseInviteModal}
+              onInviteSent={handleInviteSent}
             />
           )}
         </div>

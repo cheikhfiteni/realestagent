@@ -12,6 +12,7 @@ from email.message import EmailMessage
 import aiosmtplib
 from app.db.database import get_async_db
 from fastapi.responses import JSONResponse
+from app.config import FRONTEND_URL
 
 from dotenv import load_dotenv
 import os
@@ -53,6 +54,33 @@ async def send_verification_email(email: str, code: str):
     message["Subject"] = "Your verification code"
     message.set_content(f"Your verification code is: {code}\nValid for {EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES} minutes.")
 
+    smtp = aiosmtplib.SMTP(
+        hostname=os.getenv("SMTP_HOST"),
+        port=os.getenv("SMTP_PORT"),
+        use_tls=False,
+        timeout=10
+    )
+
+    try:
+        await smtp.connect()
+        await smtp.login(SMTP_USER, SMTP_PASSWORD)
+        await smtp.send_message(message)
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send verification email")
+    finally:
+        await smtp.quit()
+
+async def send_invitation_email_stub(to_email: str, job_name: str, invited_by_email: str):
+    message = EmailMessage()
+    message["From"] = SMTP_FROM
+    message["To"] = to_email
+    message["Subject"] = "ApartmentFinder - You've been invited to a shared search"
+    message.set_content(f"You've been invited to collaborate on the job '{job_name}' by {invited_by_email}.\n\n"
+                         f"To get started, create your account using this email address at {FRONTEND_URL}/signup (or login if you have recently created an account).\n"
+                         f"You can continue to access this job by logging into your account at {FRONTEND_URL}.\n"
+                         f"\nThanks,\nApartmentFinder Team")
+    
     smtp = aiosmtplib.SMTP(
         hostname=os.getenv("SMTP_HOST"),
         port=os.getenv("SMTP_PORT"),

@@ -45,6 +45,8 @@ scraper as an independent service).
 Run backend through `docker compose up --build`
 Run the frontend from the sub-repository using `pnpm dev`
 
+If you want to observe the background task logs run `celery -A app.celery_app worker --loglevel=info`
+
 ## Migrations
 
 Use the makefile to generate and apply. Use migrate-init if first time managing migration in dev environment

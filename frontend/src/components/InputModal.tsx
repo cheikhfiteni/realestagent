@@ -137,33 +137,50 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <div ref={modalRef} className="bg-gray-50 rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-4">Create New Job</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 animate-fadeIn">
+      <div ref={modalRef} className="bg-card text-card-foreground rounded-lg shadow-xl p-6 w-full max-w-xl animate-dropFadeIn">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-semibold text-primary">Create New Job</h2>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Close modal"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Job Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Job Name <span className="text-red-500">*</span>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white text-black h-10"
-                required
-              />
+            <label htmlFor="name" className="block text-sm font-medium text-muted-foreground mb-1">
+              Job Name <span className="text-destructive">*</span>
             </label>
+            <input
+              id="name"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border-border bg-input text-foreground shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 h-10 px-3"
+              required
+            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Location <span className="text-red-500">*</span>
+          {/* Location and Zipcode - Grouped */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="location" className="block text-sm font-medium text-muted-foreground mb-1">
+                Location <span className="text-destructive">*</span>
+              </label>
               <select
+                id="location"
                 name="location"
                 value={formData.location}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white text-black h-10"
+                className="mt-1 block w-full rounded-md border-border bg-input text-foreground shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 h-10 px-3"
                 required
               >
                 <option value="">Select a location</option>
@@ -173,121 +190,134 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
                   </option>
                 ))}
               </select>
-            </label>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Zipcode (Optional)
+            </div>
+            <div>
+              <label htmlFor="zipcode" className="block text-sm font-medium text-muted-foreground mb-1">
+                Zipcode (Optional)
+              </label>
               <input
+                id="zipcode"
                 type="text"
                 name="zipcode"
                 value={formData.zipcode}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white text-black h-10"
+                className="mt-1 block w-full rounded-md border-border bg-input text-foreground shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 h-10 px-3"
                 pattern="[0-9]{5}"
                 title="Five digit zip code"
               />
-            </label>
+            </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
+          
+          {/* Search Distance */}
+           <div>
+            <label htmlFor="search_distance_miles" className="block text-sm font-medium text-muted-foreground mb-1">
               Search Distance (miles)
-              <input
-                type="number"
-                name="search_distance_miles"
-                value={formData.search_distance_miles ?? ''}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                min="1"
-                max="100"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white text-black h-10"
-              />
             </label>
+            <input
+              id="search_distance_miles"
+              type="number"
+              name="search_distance_miles"
+              value={formData.search_distance_miles ?? ''}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              min="1"
+              max="100"
+              className="mt-1 block w-full rounded-md border-border bg-input text-foreground shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 h-10 px-3"
+            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Minimum Bedrooms
+          {/* Numerical Inputs - Grouped */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="min_bedrooms" className="block text-sm font-medium text-muted-foreground mb-1">
+                Min Bedrooms
+              </label>
               <input
+                id="min_bedrooms"
                 type="number"
                 name="min_bedrooms"
                 value={formData.min_bedrooms ?? ''}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white text-black h-10"
+                className="mt-1 block w-full rounded-md border-border bg-input text-foreground shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 h-10 px-3"
               />
-            </label>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Minimum Square Feet
+            </div>
+            <div>
+              <label htmlFor="min_bathrooms" className="block text-sm font-medium text-muted-foreground mb-1">
+                Min Bathrooms
+              </label>
               <input
-                type="number"
-                name="min_square_feet"
-                value={formData.min_square_feet ?? ''}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white text-black h-10"
-              />
-            </label>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Minimum Bathrooms
-              <input
+                id="min_bathrooms"
                 type="number"
                 name="min_bathrooms"
                 value={formData.min_bathrooms ?? ''}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 step="0.5"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white text-black h-10"
+                className="mt-1 block w-full rounded-md border-border bg-input text-foreground shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 h-10 px-3"
               />
-            </label>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Target Price per Bedroom
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="min_square_feet" className="block text-sm font-medium text-muted-foreground mb-1">
+                Min Square Feet
+              </label>
               <input
+                id="min_square_feet"
+                type="number"
+                name="min_square_feet"
+                value={formData.min_square_feet ?? ''}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className="mt-1 block w-full rounded-md border-border bg-input text-foreground shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 h-10 px-3"
+              />
+            </div>
+             <div>
+              <label htmlFor="target_price_bedroom" className="block text-sm font-medium text-muted-foreground mb-1">
+                Target Price/Bedroom
+              </label>
+              <input
+                id="target_price_bedroom"
                 type="number"
                 name="target_price_bedroom"
                 value={formData.target_price_bedroom ?? ''}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white text-black h-10"
+                className="mt-1 block w-full rounded-md border-border bg-input text-foreground shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 h-10 px-3"
               />
-            </label>
+            </div>
           </div>
 
+          {/* Additional Criteria */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="criteria" className="block text-sm font-medium text-muted-foreground mb-1">
               Additional Criteria
-              <textarea
-                name="criteria"
-                value={formData.criteria}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white text-black"
-                rows={3}
-              />
             </label>
+            <textarea
+              id="criteria"
+              name="criteria"
+              value={formData.criteria}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border-border bg-input text-foreground shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 px-3 py-2"
+              rows={3}
+              placeholder="describe your housing preferences in natural language in as much detail as possible, e.g. in terms of lighting, and fireplace, want visible ventilation, etc"
+            />
           </div>
 
-          <div className="flex justify-end gap-4">
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-4 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground bg-muted rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600"
+              className="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-md hover:bg-primary/90 transition-colors"
             >
               Create Job
             </button>
