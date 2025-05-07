@@ -1,16 +1,16 @@
 import hashlib
-from app.models.models import engine, Listing, Job, JobTemplate, JobListingScore
+from app.models.models import engine, Listing, Job, JobTemplate, JobListingScore, User, job_access
 from sqlalchemy.orm import sessionmaker, Session
 from app.config import DATABASE_URL, NO_IMAGE_URL
-from sqlalchemy import create_engine, select, func
+from sqlalchemy import create_engine, select, func, or_
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import selectinload, aliased, contains_eager
 from contextlib import contextmanager, asynccontextmanager
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 import json
 from uuid import UUID
 from sqlalchemy import and_
-from sqlalchemy.orm import selectinload
 
 # Sync SQLAlchemy engine for migrations and model creation
 engine = create_engine(DATABASE_URL, echo=True)
@@ -149,59 +149,89 @@ async def create_job(user_id: UUID, template_id: UUID, name: str) -> Job:
         return job
 
 async def get_user_jobs(user_id: UUID):
-    # Subquery to count listings per job
-    listing_count = (
+    listing_count_subquery = (
         select(func.count(JobListingScore.listing_id))
         .where(JobListingScore.job_id == Job.id)
+        .correlate(Job)
         .scalar_subquery()
-        .label('listing_count')
+        .label("listing_count")
     )
 
-    # Subquery to get the highest scored listing's image for each job
-    latest_listing = (
+    latest_listing_image_subquery = (
         select(Listing.image_urls)
         .join(JobListingScore, JobListingScore.listing_id == Listing.id)
         .where(JobListingScore.job_id == Job.id)
+        .correlate(Job)
         .order_by(JobListingScore.score.desc())
         .limit(1)
         .scalar_subquery()
-        .label('best_listing_images')
+        .label("best_listing_images")
     )
 
+    jt_alias = aliased(JobTemplate, name="template_alias")
+
     query = (
-        select(Job, listing_count, latest_listing)
-        .where(Job.user_id == user_id)
-        .order_by(Job.updated_at.desc())
+        select(Job, listing_count_subquery, latest_listing_image_subquery)
+        .join(jt_alias, Job.template_id == jt_alias.id)
+        .outerjoin(job_access, job_access.c.job_id == Job.id)
+        .where(
+            or_(
+                Job.user_id == user_id,
+                job_access.c.user_id == user_id
+            )
+        )
+        .group_by(
+            Job.id,
+            jt_alias.id,
+            jt_alias.user_id,
+            jt_alias.min_bedrooms,
+            jt_alias.min_square_feet,
+            jt_alias.min_bathrooms,
+            jt_alias.target_price_bedroom,
+            jt_alias.criteria,
+            jt_alias.location,
+            jt_alias.zipcode,
+            jt_alias.search_distance_miles,
+            jt_alias.created_at
+        )
+        .order_by(Job.updated_at.desc(), Job.created_at.desc())
+        .options(contains_eager(Job.template, alias=jt_alias))
     )
     
     async with get_async_db() as session:
         result = await session.execute(query)
         jobs_data = []
-        for job, count, images in result.all():
-            image_urls = json.loads(images) if images else []
-            jobs_data.append((job, count, image_urls[0] if image_urls else NO_IMAGE_URL))
+        for job_instance, count, images in result.all():
+            image_urls_list = []
+            if images and isinstance(images, str):
+                try:
+                    loaded_images = json.loads(images)
+                    if isinstance(loaded_images, list):
+                        image_urls_list = loaded_images
+                except json.JSONDecodeError:
+                    pass
+            elif isinstance(images, list):
+                image_urls_list = images
+
+            jobs_data.append((job_instance, count if count is not None else 0, image_urls_list[0] if image_urls_list else NO_IMAGE_URL))
         return jobs_data
 
-async def get_job_with_listings(job_id: UUID, user_id: UUID) -> Optional[Dict]:
-    """Get a job's listings with their scores."""
-    async with get_async_db() as session:
-        # Get job and verify user
-        job = await session.get(Job, job_id)
-        if not job or job.user_id != user_id:
-            return None
+async def get_job_with_listings(job_id: UUID, user_id: UUID) -> Optional[List[Dict]]:
+    if not await check_job_access(job_id, user_id):
+        return None
             
-        # Get all listings with scores in a single query
+    async with get_async_db() as session:
         result = await session.execute(
             select(Listing, JobListingScore)
             .join(JobListingScore, JobListingScore.listing_id == Listing.id)
             .where(JobListingScore.job_id == job_id)
+            .order_by(JobListingScore.score.desc())
         )
         listing_scores = result.all()
         
         if not listing_scores:
             return []
             
-        # Format response
         formatted_listings = []
         for listing, score in listing_scores:
             image_urls = json.loads(listing.image_urls) if listing.image_urls else []
@@ -295,4 +325,50 @@ async def filter_listing_ids_on_job(job_id: UUID, listing_ids: List[UUID]) -> Li
             )
         )
         return result.scalars().all()
+
+async def get_user_by_email(email: str) -> Optional[User]:
+    async with get_async_db() as session:
+        result = await session.execute(select(User).where(User.email == email))
+        return result.scalar_one_or_none()
+
+async def create_invited_user(email: str) -> User:
+    async with get_async_db() as session:
+        new_user = User(email=email, account_status='invited', is_active=False)
+        session.add(new_user)
+        await session.commit()
+        await session.refresh(new_user)
+        return new_user
+
+async def add_user_to_job_access(user_id: UUID, job_id: UUID) -> bool:
+    async with get_async_db() as session:
+        existing_access_result = await session.execute(
+            select(job_access).where(
+                and_(job_access.c.user_id == user_id, job_access.c.job_id == job_id)
+            )
+        )
+        if existing_access_result.scalar_one_or_none():
+            return False
+
+        stmt = job_access.insert().values(user_id=user_id, job_id=job_id)
+        await session.execute(stmt)
+        await session.commit()
+        return True
+
+async def check_job_access(job_id: UUID, user_id: UUID) -> bool:
+    async with get_async_db() as session:
+        job_owner_result = await session.execute(select(Job).where(and_(Job.id == job_id, Job.user_id == user_id)))
+        if job_owner_result.scalar_one_or_none():
+            return True
+        
+        shared_access_result = await session.execute(
+            select(job_access).where(
+                and_(job_access.c.user_id == user_id, job_access.c.job_id == job_id)
+            )
+        )
+        return shared_access_result.scalar_one_or_none() is not None
+
+async def get_job_by_id(job_id: UUID) -> Optional[Job]:
+    async with get_async_db() as session:
+        job = await session.get(Job, job_id)
+        return job
 

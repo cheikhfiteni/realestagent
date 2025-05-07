@@ -4,14 +4,15 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.logic import run_single_job, test_just_evaluation
-from app.services.authentication import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, router as auth_router, get_current_user
+from app.services.authentication import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, router as auth_router, get_current_user, send_invitation_email_stub
 from pydantic import BaseModel
 from typing import Dict, Optional, List
 from datetime import datetime
 from sqlalchemy import text
 from app.db.database import (
     engine, get_next_pending_job, get_user_jobs, get_job_with_listings, 
-    create_job_template, create_job
+    create_job_template, create_job,
+    get_user_by_email, create_invited_user, add_user_to_job_access, get_job_by_id
 )
 from app.models.models import User
 from starlette.middleware.sessions import SessionMiddleware
@@ -30,6 +31,9 @@ class JobInput(BaseModel):
     location: Optional[str] = None
     zipcode: Optional[str] = None
     search_distance_miles: Optional[float] = 10.0
+
+class InviteInput(BaseModel):
+    email: str
 
 class JobStubOutput(BaseModel):
     id: UUID
@@ -164,6 +168,51 @@ async def add_job(job_input: JobInput, current_user: User = Depends(get_current_
             status_code=500,
             detail=f"Failed to create job: {str(e)}"
         )
+
+@app.post("/jobs/{job_id}/invite")
+async def invite_user_to_job(
+    job_id: UUID,
+    invite_input: InviteInput,
+    current_user: User = Depends(get_current_user),
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    job = await get_job_by_id(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You do not have permission to invite users to this job.")
+
+    target_email = invite_input.email.lower().strip()
+    if not target_email:
+        raise HTTPException(status_code=400, detail="Email cannot be empty.")
+    if target_email == current_user.email:
+        raise HTTPException(status_code=400, detail="You cannot invite yourself to a job.")
+
+    invited_user = await get_user_by_email(target_email)
+    is_new_user_scenario = False
+
+    if not invited_user:
+        invited_user = await create_invited_user(target_email)
+        is_new_user_scenario = True
+    elif invited_user.account_status == 'invited' and not invited_user.is_active:
+        is_new_user_scenario = True
+
+    access_newly_granted = await add_user_to_job_access(invited_user.id, job_id)
+
+    if not access_newly_granted:
+        return {"status": "info", "message": f"User {target_email} already has access to this job."}
+
+    background_tasks.add_task(
+        send_invitation_email_stub,
+        to_email=target_email,
+        job_name=job.name,
+        invited_by_email=current_user.email
+    )
+    
+    if is_new_user_scenario:
+        return {"status": "success", "message": f"Invitation sent to {target_email}. They will need to complete their account registration."}
+    else:
+        return {"status": "success", "message": f"Job '{job.name}' has been shared with {target_email}."}
 
 @app.get("/db-health")
 async def database_health_check():
