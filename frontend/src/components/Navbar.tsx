@@ -9,7 +9,7 @@ const Navbar = () => {
             <span className="text-apartment-green">Apartment</span>Finder
           </a>
         </div>
-        <nav className="hidden md:flex items-center space-x-4">
+        <nav className="hidden md:flex items-center space-x-4 ml-auto pr-8">
           <a href="#features" className="text-sm font-medium hover:text-apartment-blue transition-colors">Features</a>
           <a href="#how-it-works" className="text-sm font-medium hover:text-apartment-blue transition-colors">How It Works</a>
           <a href="#pricing" className="text-sm font-medium hover:text-apartment-blue transition-colors">Pricing</a>
