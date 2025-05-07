@@ -73,17 +73,24 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
-    margin: 0;
-    min-width: 320px;
-    min-height: 100vh;
-    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    font-weight: 400;
-    color-scheme: light dark;
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .container-section {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24;
+  }
+  
+  .heading-primary {
+    @apply text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900;
+  }
+  
+  .heading-secondary {
+    @apply text-3xl md:text-4xl font-bold tracking-tight text-gray-900;
+  }
+  
+  .heading-tertiary {
+    @apply text-2xl font-bold tracking-tight text-gray-900;
   }
 }
 
