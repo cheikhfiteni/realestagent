@@ -300,8 +300,9 @@ function InputModal({ onClose, onSuccess }: InputModalProps) {
               name="criteria"
               value={formData.criteria}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-border bg-input text-foreground shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
+              className="mt-1 block w-full rounded-md border-border bg-input text-foreground shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 px-3 py-2"
               rows={3}
+              placeholder="describe your housing preferences in natural language in as much detail as possible, e.g. in terms of lighting, and fireplace, want visible ventilation, etc"
             />
           </div>
 
