@@ -12,7 +12,7 @@ from email.message import EmailMessage
 import aiosmtplib
 from app.db.database import get_async_db
 from fastapi.responses import JSONResponse
-from app.config import FRONTEND_URL
+from app.config import FRONTEND_URL, COMMON_PARENT_DOMAIN
 
 from dotenv import load_dotenv
 import os
@@ -180,7 +180,8 @@ async def verify_code(verify_data: VerifyCode):
         value=access_token,
         httponly=True,        # Cannot be accessed by JavaScript
         secure=True,         # Only sent over HTTPS
-        samesite="strict",   # CSRF protection
+        samesite="lax",   # Allows when frontend  still prevents ajax XSS attacks
+        domain=COMMON_PARENT_DOMAIN,
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     
@@ -244,6 +245,7 @@ async def logout():
         key="session_token",
         httponly=True,
         secure=True,
-        samesite="strict"
+        samesite="lax",
+        domain=COMMON_PARENT_DOMAIN
     )
     return response
