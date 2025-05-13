@@ -37,6 +37,7 @@ SMTP_HOST=
 SMTP_USER=
 SMTP_PORT=
 SMTP_PASSWORD=
+SMTP_FROM=
 ```
 
 Note that DB secrets point differently in dev and prod. (This is also probably going to happen with running the
