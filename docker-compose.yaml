@@ -120,7 +120,7 @@ services:
         condition: service_healthy
       db:
         condition: service_healthy
-    command: celery -A app.services.celery_app worker --loglevel=DEBUG --pool=solo
+    command: celery -A app.services.celery_app worker --loglevel=DEBUG
 
 networks:
   app_network:

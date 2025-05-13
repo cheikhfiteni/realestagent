@@ -21,12 +21,13 @@ class CraigslistScraper(BaseScraper):
         self.base_url = "https://craigslist.org/search/apa"
         self.sleep_time = 0.2
         self.existing_hashes = set()
+        self.max_listings_to_scrape = config.max_listings_to_scrape  # Store the limit
 
     def __enter__(self):
-        print(f"[DEBUG] Entering CraigslistScraper context manager for job {self.config.job_id}")
+        print(f"[DEBUG] Entering CraigslistScraper context manager for job {self.config.template_id}")
         return self
     def __exit__(self, exc_type, exc_value, traceback):
-        print(f"[DEBUG] Exiting CraigslistScraper context manager for job {self.config.job_id}")
+        print(f"[DEBUG] Exiting CraigslistScraper context manager for job {self.config.template_id}")
 
     def get_search_url(self) -> str:
         # Build base URL with location if provided
@@ -282,30 +283,40 @@ class CraigslistScraper(BaseScraper):
     async def scrape(self) -> AsyncGenerator[ScrapeOutput, None]:
         """Main scraping method that yields either new listings or existing listing hashes."""
         print(f"[DEBUG] In the craiglist scraping loop for the task {self.config.template_id}")
+        scraped_count = 0 # Counter for scraped items
         try:
-            self.logger.info("Starting scraping process")
+            self.logger.info(f"Starting scraping process. Limit: {self.max_listings_to_scrape}")
             # Load existing hashes before starting
             await self.load_existing_hashes()
             urls = await self.get_listing_urls()
-            print(f"[DEBUG] Found {len(urls)} listings")
+            print(f"[DEBUG] Found {len(urls)} potential listings")
             for url in urls:
+                # Check scrape limit
+                if self.max_listings_to_scrape is not None and scraped_count >= self.max_listings_to_scrape:
+                    self.logger.info(f"Reached scrape limit of {self.max_listings_to_scrape}. Stopping.")
+                    break 
+                
                 # Check if listing already exists before scraping
                 post_id = url.split("/")[-1].split(".")[0]
                 listing_hash = _listing_hash(post_id)
                 
                 if listing_hash in self.existing_hashes:
-                    self.logger.info(f"Found existing listing: {url}")
+                    self.logger.info(f"Found existing listing (hash): {url}")
                     yield listing_hash
                     continue
 
-                self.existing_hashes.add(listing_hash)
-                self.logger.info(f"Scraping listing from URL: {url}")
+                # Only add to existing_hashes if it's truly new to avoid double counting later
+                # self.existing_hashes.add(listing_hash) # Moved inside the 'if listing' block
+                self.logger.info(f"Scraping new listing from URL: {url}")
                 listing = await self.scrape_listing(url)
+                
                 if listing:
+                    self.existing_hashes.add(listing.hash) # Add hash after confirming scrape
                     self.logger.info(f"Successfully scraped listing: {listing.title}")
                     if self.validate_listing(listing):
                         self.logger.info(f"Listing passed validation: {listing.title}")
                         yield listing
+                        scraped_count += 1 # Increment count only for yielded new listings
                     else:
                         self.logger.info(f"Listing failed validation: {listing.title}")
                 else:

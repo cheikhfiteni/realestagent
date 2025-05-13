@@ -98,7 +98,8 @@ class ScrapingConfig:
         min_square_feet: Optional[int] = None,
         location: Optional[str] = None,
         zipcode: Optional[str] = None,
-        search_radius_miles: float = 10.0
+        search_radius_miles: float = 10.0,
+        max_listings_to_scrape: Optional[int] = 20
     ):
         self.template_id = template_id
         self.min_price = min_price
@@ -109,6 +110,7 @@ class ScrapingConfig:
         self.location = location
         self.zipcode = zipcode
         self.search_radius_miles = search_radius_miles
+        self.max_listings_to_scrape = max_listings_to_scrape
     @classmethod
     def from_job_template(cls, template: JobTemplate) -> 'ScrapingConfig':
         """Create config from a job template"""
