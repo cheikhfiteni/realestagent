@@ -1,3 +1,5 @@
+import asyncio
+from functools import wraps
 from typing import List
 from uuid import UUID
 from app.core.evaluator import evaluate_listing_aesthetics, evaluate_listing_hueristics
@@ -84,6 +86,26 @@ async def evaluate_job_listings(job: Job):
                 print(f"Error evaluating listing {score.listing_id}: {str(e)}")
                 continue
 
+# def async_task(app=None, *args, **kwargs):
+#     """Decorator to properly handle async tasks with Celery."""
+#     def decorator(func):
+#         @app.task(*args, **kwargs)
+#         @wraps(func)
+#         def wrapper(*args, **kwargs):
+#             # Get the event loop or create one if it doesn't exist
+#             try:
+#                 loop = asyncio.get_event_loop()
+#             except RuntimeError:
+#                 loop = asyncio.new_event_loop()
+#                 asyncio.set_event_loop(loop)
+            
+#             # Run the coroutine and return its result
+#             return loop.run_until_complete(func(*args, **kwargs))
+#         return wrapper
+#     return decorator
+
+
+# @async_task(app=celery, bind=True, max_retries=1)
 @celery.task(bind=True, max_retries=1)
 def run_single_job(self, job_id: UUID):
     """Run a complete job cycle - scraping and evaluation."""
@@ -110,4 +132,11 @@ async def test_just_evaluation(job_id: UUID):
 
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(run_job(UUID('031cbf19-3254-46e0-9d61-9b37e14255a5')))
+    from uuid import UUID 
+
+    async def main():
+        job_id_to_run = UUID('031cbf19-3254-46e0-9d61-9b37e14255a5')
+        await run_single_job(job_id_to_run)
+
+
+    asyncio.run(main())

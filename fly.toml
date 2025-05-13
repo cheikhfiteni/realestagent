@@ -19,6 +19,10 @@ primary_region = 'sjc'
   min_machines_running = 1
   processes = ['app']
 
+[processes]
+  app = "uvicorn app.main:app --host 0.0.0.0 --port 8000 --loop uvloop"
+  worker = "celery -A app.services.celery_app worker --loglevel=INFO --pool=solo"
+
 [[vm]]
   memory = '2gb'
   cpu_kind = 'shared'
