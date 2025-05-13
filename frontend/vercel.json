@@ -1,0 +1,8 @@
+{
+    "rewrites": [
+        {
+            "source": "/((?!api/|@vite/|@react-refresh|src/|public/|assets/|.*\\.(?:js|mjs|ts|tsx|css|json|html|png|jpe?g|gif|svg|ico|webmanifest|woff2?|ttf|otf|eot)$).*)",
+            "destination": "/index.html"
+        }
+    ]
+}

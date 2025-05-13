@@ -14,3 +14,4 @@ __pycache__/
 
 # temporarily check out the debugging page
 page_structure.html
+.vercel
