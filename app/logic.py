@@ -17,18 +17,18 @@ BATCH_SIZE = 5
 SLEEP_TIME = 0.2
 
 async def batch_database_save(upsert_listings: List[Listing], job_id: UUID, session: AsyncSession) -> List[Listing]:
-    saved_listings = await save_new_listings_to_db(upsert_listings, session=session)
+    saved_listings = await save_new_listings_to_db(upsert_listings)
     for listing in saved_listings:
-        await update_job_listing_score(job_id, listing.id, 0, "", session=session)
+        await update_job_listing_score(job_id, listing.id, 0, "")
     return []
 
 async def batch_memoized_score_update(job_id: UUID, listing_hashes: List[str], session: AsyncSession) -> None:
     """Update job-listing relationships for existing listings."""
-    listing_ids = await get_listing_id_by_hash(listing_hashes, session=session)
-    existing_ids = await filter_listing_ids_on_job(job_id, listing_ids, session=session)
+    listing_ids = await get_listing_id_by_hash(listing_hashes)
+    existing_ids = await filter_listing_ids_on_job(job_id, listing_ids)
     for li in listing_ids:
         if li not in existing_ids:
-            await update_job_listing_score(job_id, li, 0, "", session=session)
+            await update_job_listing_score(job_id, li, 0, "")
 
 async def scrape_listings(job: Job, session: AsyncSession):
     print(f"[DEBUG] Starting scrape_listings for job {job.id}")
@@ -63,7 +63,7 @@ async def scrape_listings(job: Job, session: AsyncSession):
 
 async def evaluate_job_listings(job: Job, session: AsyncSession):
     """Evaluate listings for a specific job using its template criteria."""
-    listing_scores = await get_job_listing_scores(job.id, session=session)
+    listing_scores = await get_job_listing_scores(job.id)
     
     print(f"\033[33mEvaluating listings for job: {job.name}")
     print(f"Found {len(listing_scores)} listings to evaluate\033[0m")
@@ -71,7 +71,7 @@ async def evaluate_job_listings(job: Job, session: AsyncSession):
     for score in listing_scores:
         if score.score == 0:
             try:
-                listing = await get_listing_by_id(score.listing_id, session=session)
+                listing = await get_listing_by_id(score.listing_id)
                 if not listing:
                     print(f"Listing {score.listing_id} not found for evaluation.")
                     continue
@@ -81,7 +81,7 @@ async def evaluate_job_listings(job: Job, session: AsyncSession):
                 total_score = hueristic_score + aesthetic_score
                 total_trace = f"{hueristic_trace} | {aesthetic_trace}"
                 
-                await update_job_listing_score(job.id, listing.id, total_score, total_trace, session=session)
+                await update_job_listing_score(job.id, listing.id, total_score, total_trace)
                 
             except Exception as e:
                 print(f"Error evaluating listing {score.listing_id}: {str(e)}")
