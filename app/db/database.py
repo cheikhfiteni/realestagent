@@ -13,12 +13,14 @@ from uuid import UUID
 from sqlalchemy import and_
 
 # Sync SQLAlchemy engine for migrations and model creation
-engine = create_engine(DATABASE_URL, echo=True)
+engine = create_engine(DATABASE_URL, echo=True, pool_pre_ping=True, pool_recycle=1800)
 SessionLocal = sessionmaker(bind=engine)
 
 # Async engine
 async_engine = create_async_engine(
-    DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://').replace("?sslmode=", "?ssl=")
+    DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://').replace("?sslmode=", "?ssl="),
+    pool_pre_ping=True,  # Detect closed connections and reconnect automatically
+    pool_recycle=1800    # Recycle connections every 30 minutes to avoid idle-timeout disconnects
 )
 AsyncSessionLocal = sessionmaker(
     async_engine, 
